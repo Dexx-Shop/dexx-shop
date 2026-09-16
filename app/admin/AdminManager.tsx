@@ -1,22 +1,15 @@
 'use client';
 
 import { addAdminAction, removeAdminAction } from 'app/admin/actions';
+import { User } from 'lib/auth';
 import { useState } from 'react';
-
-interface AdminUser {
-  id: string;
-  username: string;
-  email: string;
-  role: 'owner' | 'admin' | 'moderator' | 'user';
-  createdAt?: string;
-}
 
 export default function AdminManager({
   admins,
   currentUserId,
   isOwner
 }: {
-  admins: AdminUser[];
+  admins: User[];
   currentUserId: string;
   isOwner: boolean;
 }) {
@@ -134,50 +127,55 @@ export default function AdminManager({
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {admins.map((admin) => (
-            <div
-              key={admin.id}
-              className="bg-neutral-950 border border-neutral-800/80 rounded-xl p-4 flex items-center justify-between gap-4"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center font-bold text-sm text-red-500 shrink-0">
-                  {admin.username?.[0]?.toUpperCase() || 'A'}
-                </div>
+          {admins.map((admin) => {
+            const userRole = admin.role || 'user';
+            const initialLetter = admin.username?.[0]?.toUpperCase() || admin.email?.[0]?.toUpperCase() || 'U';
 
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-white truncate">
-                      @{admin.username || 'Kullanıcı'}
-                    </span>
-                    <span
-                      className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                        admin.role === 'owner'
-                          ? 'bg-amber-950/80 border border-amber-800 text-amber-400'
-                          : admin.role === 'admin'
-                          ? 'bg-red-950/80 border border-red-800 text-red-400'
-                          : 'bg-blue-950/80 border border-blue-800 text-blue-400'
-                      }`}
-                    >
-                      {admin.role}
-                    </span>
+            return (
+              <div
+                key={admin.id}
+                className="bg-neutral-950 border border-neutral-800/80 rounded-xl p-4 flex items-center justify-between gap-4"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center font-bold text-sm text-red-500 shrink-0">
+                    {initialLetter}
                   </div>
-                  <p className="text-xs text-neutral-500 truncate mt-0.5">
-                    {admin.email}
-                  </p>
-                </div>
-              </div>
 
-              {isOwner && admin.role !== 'owner' && admin.id !== currentUserId && (
-                <button
-                  onClick={() => handleRemove(admin.id, admin.username || admin.email)}
-                  title="Yetkiyi Kaldır"
-                  className="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-red-900 hover:text-red-400 text-neutral-500 flex items-center justify-center text-xs transition cursor-pointer shrink-0"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          ))}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-white truncate">
+                        @{admin.username || 'Kullanıcı'}
+                      </span>
+                      <span
+                        className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                          userRole === 'owner'
+                            ? 'bg-amber-950/80 border border-amber-800 text-amber-400'
+                            : userRole === 'admin'
+                            ? 'bg-red-950/80 border border-red-800 text-red-400'
+                            : 'bg-blue-950/80 border border-blue-800 text-blue-400'
+                        }`}
+                      >
+                        {userRole}
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-500 truncate mt-0.5">
+                      {admin.email}
+                    </p>
+                  </div>
+                </div>
+
+                {isOwner && userRole !== 'owner' && admin.id !== currentUserId && (
+                  <button
+                    onClick={() => handleRemove(admin.id, admin.username || admin.email)}
+                    title="Yetkiyi Kaldır"
+                    className="w-8 h-8 rounded-lg bg-neutral-900 border border-neutral-800 hover:border-red-900 hover:text-red-400 text-neutral-500 flex items-center justify-center text-xs transition cursor-pointer shrink-0"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -1,0 +1,24 @@
+[
+  {
+    "id": "1789593492999",
+    "title": "Law Enforcement Vehicle Packs",
+    "game": "FIVEM",
+    "securityTag": "Full Fix",
+    "status": "active",
+    "pricing": {
+      "daily": 0,
+      "weekly": 0,
+      "monthly": 0,
+      "lifetime": 25
+    },
+    "stock": {
+      "daily": false,
+      "weekly": false,
+      "monthly": false,
+      "lifetime": true
+    },
+    "description": "Full fix lisanslı araçlar",
+    "image": "/uploads/1789593492998-5279.webp",
+    "createdAt": "2026-09-16T21:18:12.999Z"
+  }
+]

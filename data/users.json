@@ -1,0 +1,22 @@
+[
+  {
+    "id": "1789518714191",
+    "fullName": "Eymen Ulu",
+    "username": "eymen",
+    "email": "eymenulu66@gmail.com",
+    "refCode": "31",
+    "passwordHash": "96cae35ce8a9b0244178bf28e4966c2ce1b8385723a96a6b838858cdd6ca0a1e",
+    "createdAt": "2026-09-16T00:31:54.191Z",
+    "role": "moderator",
+    "adminSince": "2026-09-16T15:28:40.765Z"
+  },
+  {
+    "id": "1789571651176",
+    "fullName": "Eymen Ulu",
+    "username": "dexx",
+    "email": "dexxmarkett@gmail.com",
+    "refCode": "",
+    "passwordHash": "96cae35ce8a9b0244178bf28e4966c2ce1b8385723a96a6b838858cdd6ca0a1e",
+    "createdAt": "2026-09-16T15:14:11.176Z"
+  }
+]

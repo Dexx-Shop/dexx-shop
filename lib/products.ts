@@ -82,3 +82,7 @@ export function getLowestPrice(pricing: ProductPricing): number {
   if (prices.length === 0) return 0;
   return Math.min(...prices);
 }
+
+export async function getProductById(id: string) {
+  return getProduct(id);
+}

@@ -1,112 +1,84 @@
 import fs from 'fs';
 import path from 'path';
 
-export type ProductStatus = 'active' | 'updating' | 'inactive';
-
 export interface ProductPricing {
   daily?: number;
   weekly?: number;
   monthly?: number;
-  lifetime?: number;
-}
-
-export interface ProductStock {
-  daily?: boolean;
-  weekly?: boolean;
-  monthly?: boolean;
-  lifetime?: boolean;
 }
 
 export interface Product {
   id: string;
   title: string;
   game: string;
-  securityTag: string;
-  status: ProductStatus;
-  pricing: ProductPricing;
-  stock?: ProductStock;
-  features?: string[];
-  description: string;
   image: string;
-  createdAt: string;
+  description?: string;
+  securityTag?: string;
+  pricing: ProductPricing;
 }
 
-const productsFilePath = path.join(process.cwd(), 'data', 'products.json');
+const PRODUCTS_FILE = path.join(process.cwd(), 'data', 'products.json');
 
+// Dosya ve klasör yoksa oluştur
 function ensureProductsFile() {
-  const dir = path.dirname(productsFilePath);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(productsFilePath)) {
-    fs.writeFileSync(productsFilePath, JSON.stringify([]), 'utf-8');
+  const dir = path.dirname(PRODUCTS_FILE);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  if (!fs.existsSync(PRODUCTS_FILE)) {
+    // Başlangıç varsayılan ürünleri
+    const defaultProducts: Product[] = [
+      {
+        id: 'prod_rust_1',
+        title: 'DexX Rust Private Suite',
+        game: 'RUST',
+        image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
+        description: 'Kernel level bypass, Silent Aim, ESP & Recoil Control.',
+        securityTag: 'Undetected',
+        pricing: { daily: 6.99, weekly: 19.99, monthly: 39.99 }
+      },
+      {
+        id: 'prod_fivem_1',
+        title: 'DexX FiveM Enhanced ESP',
+        game: 'FIVEM',
+        image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
+        description: 'Roleplay uyumlu, stream-proof oyuncu & araç ESP.',
+        securityTag: 'Undetected',
+        pricing: { daily: 4.99, weekly: 14.99, monthly: 29.99 }
+      }
+    ];
+    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(defaultProducts, null, 2));
   }
 }
 
+// Ürünleri Listele
 export async function getProducts(): Promise<Product[]> {
   ensureProductsFile();
   try {
-    const data = fs.readFileSync(productsFilePath, 'utf-8');
-    const parsed = JSON.parse(data);
-    return parsed.map((p: any) => ({
-      ...p,
-      pricing: p.pricing || {
-        daily: p.price || 5,
-        weekly: (p.price || 5) * 4,
-        monthly: (p.price || 5) * 12,
-        lifetime: (p.price || 5) * 30
-      },
-      stock: p.stock || {
-        daily: true,
-        weekly: true,
-        monthly: true,
-        lifetime: true
-      }
-    }));
+    const raw = fs.readFileSync(PRODUCTS_FILE, 'utf-8');
+    return JSON.parse(raw);
   } catch {
     return [];
   }
 }
 
-export async function getProductById(id: string): Promise<Product | null> {
+// Tek Ürün Getir
+export async function getProduct(id: string): Promise<Product | undefined> {
   const products = await getProducts();
-  return products.find((p) => String(p.id) === String(id)) || null;
+  return products.find((p) => p.id === id);
 }
 
-export async function addProduct(productData: Omit<Product, 'id' | 'createdAt'>): Promise<Product> {
+// Ürünleri Kaydet (Export eksik olan yer burasıydı)
+export async function saveProducts(products: Product[]): Promise<void> {
   ensureProductsFile();
-  const products = await getProducts();
-  const newProduct: Product = {
-    id: Date.now().toString(),
-    ...productData,
-    createdAt: new Date().toISOString()
-  };
-  products.push(newProduct);
-  fs.writeFileSync(productsFilePath, JSON.stringify(products, null, 2), 'utf-8');
-  return newProduct;
+  fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2));
 }
 
-export async function updateProduct(id: string, updateData: Partial<Product>): Promise<Product | null> {
-  ensureProductsFile();
-  const products = await getProducts();
-  const index = products.findIndex((p) => String(p.id) === String(id));
-  if (index === -1) return null;
-
-  products[index] = { ...products[index], ...updateData };
-  fs.writeFileSync(productsFilePath, JSON.stringify(products, null, 2), 'utf-8');
-  return products[index];
-}
-
-export async function deleteProduct(id: string): Promise<boolean> {
-  ensureProductsFile();
-  const products = await getProducts();
-  const filtered = products.filter((p) => String(p.id) !== String(id));
-  if (filtered.length === products.length) return false;
-
-  fs.writeFileSync(productsFilePath, JSON.stringify(filtered, null, 2), 'utf-8');
-  return true;
-}
-
+// En Düşük Fiyatı Hesapla
 export function getLowestPrice(pricing: ProductPricing): number {
-  const prices = Object.values(pricing).filter((val): val is number => typeof val === 'number' && val > 0);
+  const prices = [pricing.daily, pricing.weekly, pricing.monthly].filter(
+    (p): p is number => typeof p === 'number' && p > 0
+  );
   if (prices.length === 0) return 0;
   return Math.min(...prices);
 }

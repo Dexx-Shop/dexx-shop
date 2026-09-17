@@ -1,155 +1,236 @@
 'use server';
 
 import fs from 'fs';
-import { assignAdminRole, getCurrentUser, revokeAdminRole } from 'lib/auth';
-import { addProduct, deleteProduct, ProductStatus, updateProduct } from 'lib/products';
+import { getCurrentUser, User, UserRole } from 'lib/auth';
+import { getProducts, Product, saveProducts } from 'lib/products';
+import { createCoupon, getCoupons } from 'lib/wallet';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import path from 'path';
 
-export async function createProductAction(formData: FormData) {
-  const title = formData.get('title') as string;
-  const game = (formData.get('game') as string || 'GENEL').toUpperCase();
-  const securityTag = (formData.get('securityTag') as string || 'Undetected');
-  const status = (formData.get('status') as ProductStatus) || 'active';
-  
-  const daily = parseFloat(formData.get('price_daily') as string) || 0;
-  const weekly = parseFloat(formData.get('price_weekly') as string) || 0;
-  const monthly = parseFloat(formData.get('price_monthly') as string) || 0;
-  const lifetime = parseFloat(formData.get('price_lifetime') as string) || 0;
+const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
 
-  const stock_daily = formData.get('stock_daily') === 'on';
-  const stock_weekly = formData.get('stock_weekly') === 'on';
-  const stock_monthly = formData.get('stock_monthly') === 'on';
-  const stock_lifetime = formData.get('stock_lifetime') === 'on';
-
-  const description = formData.get('description') as string;
-  const imageFile = formData.get('imageFile') as File | null;
-  const imageUrlInput = formData.get('imageUrl') as string;
-
-  if (!title) throw new Error('Ürün adı zorunludur.');
-
-  let finalImagePath = imageUrlInput || '';
-
-  if (imageFile && imageFile.size > 0) {
-    const bytes = await imageFile.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-    const extension = path.extname(imageFile.name) || '.jpg';
-    const uniqueFileName = `${Date.now()}-${Math.round(Math.random() * 1e4)}${extension}`;
-    fs.writeFileSync(path.join(uploadDir, uniqueFileName), buffer);
-    finalImagePath = `/uploads/${uniqueFileName}`;
+function getUsers(): User[] {
+  try {
+    if (!fs.existsSync(USERS_FILE)) return [];
+    const raw = fs.readFileSync(USERS_FILE, 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return [];
   }
-
-  if (!finalImagePath) {
-    finalImagePath = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop';
-  }
-
-  await addProduct({
-    title,
-    game,
-    securityTag,
-    status,
-    pricing: { daily, weekly, monthly, lifetime },
-    stock: {
-      daily: stock_daily,
-      weekly: stock_weekly,
-      monthly: stock_monthly,
-      lifetime: stock_lifetime
-    },
-    description: description || '',
-    image: finalImagePath
-  });
-
-  revalidatePath('/');
-  revalidatePath('/admin');
-  revalidatePath('/status');
 }
 
-export async function updateProductAction(formData: FormData) {
-  const id = formData.get('id') as string;
-  const title = formData.get('title') as string;
-  const game = (formData.get('game') as string || 'GENEL').toUpperCase();
-  const securityTag = (formData.get('securityTag') as string || 'Undetected');
-  const status = (formData.get('status') as ProductStatus) || 'active';
-  
-  const daily = parseFloat(formData.get('price_daily') as string) || 0;
-  const weekly = parseFloat(formData.get('price_weekly') as string) || 0;
-  const monthly = parseFloat(formData.get('price_monthly') as string) || 0;
-  const lifetime = parseFloat(formData.get('price_lifetime') as string) || 0;
-
-  const stock_daily = formData.get('stock_daily') === 'on';
-  const stock_weekly = formData.get('stock_weekly') === 'on';
-  const stock_monthly = formData.get('stock_monthly') === 'on';
-  const stock_lifetime = formData.get('stock_lifetime') === 'on';
-
-  const description = formData.get('description') as string;
-  const imageFile = formData.get('imageFile') as File | null;
-  const currentImage = formData.get('currentImage') as string;
-
-  let finalImagePath = currentImage;
-
-  if (imageFile && imageFile.size > 0) {
-    const bytes = await imageFile.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-    const extension = path.extname(imageFile.name) || '.jpg';
-    const uniqueFileName = `${Date.now()}-${Math.round(Math.random() * 1e4)}${extension}`;
-    fs.writeFileSync(path.join(uploadDir, uniqueFileName), buffer);
-    finalImagePath = `/uploads/${uniqueFileName}`;
-  }
-
-  await updateProduct(id, {
-    title,
-    game,
-    securityTag,
-    status,
-    pricing: { daily, weekly, monthly, lifetime },
-    stock: {
-      daily: stock_daily,
-      weekly: stock_weekly,
-      monthly: stock_monthly,
-      lifetime: stock_lifetime
-    },
-    description: description || '',
-    image: finalImagePath
-  });
-
-  revalidatePath('/');
-  revalidatePath('/admin');
-  revalidatePath('/status');
-  redirect('/admin');
+function saveUsers(users: User[]) {
+  const dir = path.dirname(USERS_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
 
-export async function removeProductAction(id: string) {
-  await deleteProduct(id);
-  revalidatePath('/');
-  revalidatePath('/admin');
-  revalidatePath('/status');
-}
+// -------------------------------------------------------------
+// 1. ADMIN & YETKİ YÖNETİMİ
+// -------------------------------------------------------------
 
-export async function addAdminAction(formData: FormData): Promise<{ success: boolean; error?: string }> {
+export async function addAdminAction(formData: FormData) {
   const currentUser = await getCurrentUser();
   if (!currentUser || currentUser.role !== 'owner') {
-    return { success: false, error: 'Bu işlem için yetkiniz yok.' };
+    return { success: false, error: 'Bu işlem için yetkiniz bulunmuyor (Sadece Owner).' };
   }
 
-  const email = (formData.get('email') as string || '').trim();
-  const role = (formData.get('role') as 'admin' | 'moderator') || 'admin';
+  const email = (formData.get('email') as string)?.trim().toLowerCase();
+  const role = (formData.get('role') as UserRole) || 'admin';
 
-  const res = await assignAdminRole(email, role);
+  if (!email) return { success: false, error: 'E-posta adresi zorunludur.' };
+
+  const users = getUsers();
+  const targetUserIndex = users.findIndex((u) => u.email.toLowerCase() === email);
+
+  if (targetUserIndex === -1) {
+    return { success: false, error: 'Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.' };
+  }
+
+  if (users[targetUserIndex]?.role === 'owner') {
+    return { success: false, error: 'Owner yetkisi değiştirilemez.' };
+  }
+
+  users[targetUserIndex]!.role = role;
+  saveUsers(users);
+
   revalidatePath('/admin');
-  return res;
+  return { success: true };
 }
 
 export async function removeAdminAction(userId: string) {
   const currentUser = await getCurrentUser();
-  if (!currentUser || currentUser.role !== 'owner') return;
+  if (!currentUser || currentUser.role !== 'owner') {
+    return { success: false, error: 'Bu işlem için yetkiniz bulunmuyor.' };
+  }
 
-  await revokeAdminRole(userId);
+  const users = getUsers();
+  const targetUserIndex = users.findIndex((u) => u.id === userId);
+
+  if (targetUserIndex === -1) return { success: false, error: 'Kullanıcı bulunamadı.' };
+  if (users[targetUserIndex]?.role === 'owner') return { success: false, error: 'Owner yetkisi kaldırılamaz.' };
+
+  users[targetUserIndex]!.role = 'user';
+  saveUsers(users);
+
   revalidatePath('/admin');
+  return { success: true };
+}
+
+// -------------------------------------------------------------
+// 2. ÜRÜN & MOD YÖNETİMİ (EKLEME, DÜZENLEME, SİLME)
+// -------------------------------------------------------------
+
+export async function addProductAction(formData: FormData) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin' && currentUser.role !== 'moderator')) {
+    return { success: false, error: 'Bu işlem için yetkiniz bulunmuyor.' };
+  }
+
+  const title = (formData.get('title') as string)?.trim();
+  const game = (formData.get('game') as string)?.trim().toUpperCase();
+  const image = (formData.get('image') as string)?.trim();
+  const description = (formData.get('description') as string)?.trim();
+  const securityTag = (formData.get('securityTag') as string)?.trim() || 'Undetected';
+
+  const dailyPrice = parseFloat(formData.get('price_daily') as string) || 0;
+  const weeklyPrice = parseFloat(formData.get('price_weekly') as string) || 0;
+  const monthlyPrice = parseFloat(formData.get('price_monthly') as string) || 0;
+
+  if (!title || !game || !image) {
+    return { success: false, error: 'Başlık, oyun kategorisi ve görsel bağlantısı zorunludur.' };
+  }
+
+  const products = await getProducts();
+  const newProduct: Product = {
+    id: `prod_${Date.now()}`,
+    title,
+    game,
+    image,
+    description: description || '',
+    securityTag,
+    pricing: {
+      daily: dailyPrice,
+      weekly: weeklyPrice,
+      monthly: monthlyPrice
+    }
+  };
+
+  products.unshift(newProduct);
+  await saveProducts(products);
+
+  revalidatePath('/admin');
+  revalidatePath('/');
+  return { success: true };
+}
+
+export async function updateProductAction(formData: FormData) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin' && currentUser.role !== 'moderator')) {
+    return { success: false, error: 'Bu işlem için yetkiniz bulunmuyor.' };
+  }
+
+  const id = formData.get('id') as string;
+  const title = (formData.get('title') as string)?.trim();
+  const game = (formData.get('game') as string)?.trim().toUpperCase();
+  const image = (formData.get('image') as string)?.trim();
+  const description = (formData.get('description') as string)?.trim();
+  const securityTag = (formData.get('securityTag') as string)?.trim() || 'Undetected';
+
+  const dailyPrice = parseFloat(formData.get('price_daily') as string) || 0;
+  const weeklyPrice = parseFloat(formData.get('price_weekly') as string) || 0;
+  const monthlyPrice = parseFloat(formData.get('price_monthly') as string) || 0;
+
+  if (!id || !title || !game || !image) {
+    return { success: false, error: 'Tüm zorunlu alanları doldurun.' };
+  }
+
+  const products = await getProducts();
+  const index = products.findIndex((p) => p.id === id);
+  if (index === -1) return { success: false, error: 'Ürün bulunamadı.' };
+
+  products[index] = {
+    ...products[index]!,
+    title,
+    game,
+    image,
+    description: description || '',
+    securityTag,
+    pricing: {
+      daily: dailyPrice,
+      weekly: weeklyPrice,
+      monthly: monthlyPrice
+    }
+  };
+
+  await saveProducts(products);
+  revalidatePath('/admin');
+  revalidatePath('/');
+  return { success: true };
+}
+
+export async function deleteProductAction(productId: string) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin' && currentUser.role !== 'moderator')) {
+    return { success: false, error: 'Bu işlem için yetkiniz bulunmuyor.' };
+  }
+
+  const products = await getProducts();
+  const updated = products.filter((p) => p.id !== productId);
+  await saveProducts(updated);
+
+  revalidatePath('/admin');
+  revalidatePath('/');
+  return { success: true };
+}
+
+export const createProductAction = addProductAction;
+export const removeProductAction = deleteProductAction;
+
+// -------------------------------------------------------------
+// 3. BAKİYE KUPONU YÖNETİMİ (OWNER)
+// -------------------------------------------------------------
+
+export async function createCouponAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== 'owner') {
+    return { success: false, error: 'Sadece Mağaza Sahibi (Owner) bakiye kuponu üretebilir.' };
+  }
+
+  const amountStr = formData.get('amount') as string;
+  const amount = parseFloat(amountStr);
+
+  if (isNaN(amount) || amount <= 0) {
+    return { success: false, error: 'Lütfen geçerli bir dolar miktarı girin.' };
+  }
+
+  const newCoupon = await createCoupon(amount);
+  revalidatePath('/admin');
+  return { success: true, coupon: newCoupon };
+}
+
+export async function getCouponsAction() {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== 'owner' && user.role !== 'admin')) {
+    return [];
+  }
+  return await getCoupons();
+}
+
+// Sipariş ve Key Loglarını Getir (Sadece Owner ve Admin)
+export async function getOrderLogsAction() {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== 'owner' && user.role !== 'admin')) {
+    return [];
+  }
+
+  const ordersFile = path.join(process.cwd(), 'data', 'orders.json');
+  try {
+    if (!fs.existsSync(ordersFile)) return [];
+    const raw = fs.readFileSync(ordersFile, 'utf-8');
+    const orders = JSON.parse(raw);
+    return orders;
+  } catch {
+    return [];
+  }
 }

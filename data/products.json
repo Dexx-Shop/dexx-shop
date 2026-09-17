@@ -1,24 +1,23 @@
 [
   {
-    "id": "1789593492999",
-    "title": "Law Enforcement Vehicle Packs",
-    "game": "FIVEM",
-    "securityTag": "Full Fix",
+    "id": "1789595410754",
+    "title": "DexX External Cheat",
+    "game": "RUST",
+    "securityTag": "Undetected",
     "status": "active",
     "pricing": {
-      "daily": 0,
-      "weekly": 0,
-      "monthly": 0,
-      "lifetime": 25
+      "daily": 7,
+      "weekly": 15,
+      "monthly": 50
     },
     "stock": {
-      "daily": false,
-      "weekly": false,
-      "monthly": false,
+      "daily": true,
+      "weekly": true,
+      "monthly": true,
       "lifetime": true
     },
-    "description": "Full fix lisanslı araçlar",
-    "image": "/uploads/1789593492998-5279.webp",
-    "createdAt": "2026-09-16T21:18:12.999Z"
+    "description": "Aimbot\r\nEsp\r\nMisc",
+    "image": "/uploads/1789595410753-1547.jpg",
+    "createdAt": "2026-09-16T21:50:10.754Z"
   }
 ]

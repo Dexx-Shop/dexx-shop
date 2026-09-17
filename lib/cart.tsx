@@ -3,15 +3,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export interface CartItem {
-  id: string; // Ürün ID + Tier birleşimi (örn: 12345-weekly)
-  productId: string;
+  id: string;
   title: string;
-  game: string;
-  image: string;
-  tierKey: string;
-  tierLabel: string;
   price: number;
   quantity: number;
+  image?: string;
+  game?: string;
+  selectedTier: 'Günlük' | 'Haftalık' | 'Aylık';
 }
 
 interface CartContextType {
@@ -19,13 +17,11 @@ interface CartContextType {
   isOpen: boolean;
   openCart: () => void;
   closeCart: () => void;
-  addItem: (item: Omit<CartItem, 'quantity' | 'id'>) => void;
-  removeItem: (id: string) => void;
-  increaseQuantity: (id: string) => void;
-  decreaseQuantity: (id: string) => void;
+  addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void;
+  removeItem: (id: string, tier: string) => void;
+  updateQuantity: (id: string, tier: string, quantity: number) => void;
   clearCart: () => void;
   totalPrice: number;
-  totalItems: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -33,79 +29,58 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Sayfa açıldığında localStorage'dan çek
+  // Tarayıcı hafızasından sepeti yükle
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('dexx_cart');
-      if (saved) {
-        setItems(JSON.parse(saved));
-      }
-    } catch {
-      setItems([]);
-    } finally {
-      setIsLoaded(true);
-    }
+      const stored = localStorage.getItem('dexx_cart');
+      if (stored) setItems(JSON.parse(stored));
+    } catch {}
   }, []);
 
-  // Değişikliklerde localStorage'a yaz
+  // Değişince kaydet
   useEffect(() => {
-    if (isLoaded) {
-      try {
-        localStorage.setItem('dexx_cart', JSON.stringify(items));
-      } catch (err) {
-        console.error('Sepet kaydedilemedi:', err);
-      }
-    }
-  }, [items, isLoaded]);
+    try {
+      localStorage.setItem('dexx_cart', JSON.stringify(items));
+    } catch {}
+  }, [items]);
 
   const openCart = () => setIsOpen(true);
   const closeCart = () => setIsOpen(false);
 
-  const addItem = (item: Omit<CartItem, 'quantity' | 'id'>) => {
-    const compositeId = `${item.productId}-${item.tierKey}`;
+  const addItem = (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => {
+    const tier = item.selectedTier || 'Aylık';
     setItems((prev) => {
-      const existing = prev.find((i) => i.id === compositeId);
+      const existing = prev.find((i) => i.id === item.id && i.selectedTier === tier);
       if (existing) {
         return prev.map((i) =>
-          i.id === compositeId ? { ...i, quantity: i.quantity + 1 } : i
+          i.id === item.id && i.selectedTier === tier
+            ? { ...i, quantity: i.quantity + (item.quantity || 1) }
+            : i
         );
       }
-      return [...prev, { ...item, id: compositeId, quantity: 1 }];
+      return [...prev, { ...item, selectedTier: tier, quantity: item.quantity || 1 }];
     });
     setIsOpen(true);
   };
 
-  const increaseQuantity = (id: string) => {
+  const removeItem = (id: string, tier: string) => {
+    setItems((prev) => prev.filter((i) => !(i.id === id && i.selectedTier === tier)));
+  };
+
+  const updateQuantity = (id: string, tier: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeItem(id, tier);
+      return;
+    }
     setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, quantity: i.quantity + 1 } : i))
+      prev.map((i) => (i.id === id && i.selectedTier === tier ? { ...i, quantity } : i))
     );
   };
 
-  const decreaseQuantity = (id: string) => {
-    setItems((prev) =>
-      prev
-        .map((i) => {
-          if (i.id === id) {
-            return { ...i, quantity: i.quantity - 1 };
-          }
-          return i;
-        })
-        .filter((i) => i.quantity > 0)
-    );
-  };
+  const clearCart = () => setItems([]);
 
-  const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
-  };
-
-  const clearCart = () => {
-    setItems([]);
-  };
-
-  const totalPrice = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
+  const totalPrice = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   return (
     <CartContext.Provider
@@ -116,11 +91,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         closeCart,
         addItem,
         removeItem,
-        increaseQuantity,
-        decreaseQuantity,
+        updateQuantity,
         clearCart,
-        totalPrice,
-        totalItems
+        totalPrice
       }}
     >
       {children}
@@ -129,9 +102,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useCart() {
-  const ctx = useContext(CartContext);
-  if (!ctx) {
-    throw new Error('useCart must be used within a CartProvider');
-  }
-  return ctx;
+  const context = useContext(CartContext);
+  if (!context) throw new Error('useCart must be used within CartProvider');
+  return context;
 }

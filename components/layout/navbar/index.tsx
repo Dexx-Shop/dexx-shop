@@ -1,103 +1,135 @@
-import { logoutAction } from 'app/auth/actions';
 import CartButton from 'components/cart/CartButton';
 import { getCurrentUser } from 'lib/auth';
+import { getUserBalance } from 'lib/wallet';
 import Link from 'next/link';
+import { Suspense } from 'react';
 
 export async function Navbar() {
-  const user = await getCurrentUser();
-  const hasAdminAccess = user && (user.role === 'owner' || user.role === 'admin' || user.role === 'moderator');
+  const user = await getCurrentUser().catch(() => null);
+  const isOwnerOrAdmin = user?.role === 'owner' || user?.role === 'admin';
+
+  let balance = 0;
+  if (user) {
+    try {
+      balance = await getUserBalance(user.id);
+    } catch {
+      balance = 0;
+    }
+  }
 
   return (
-    <header className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-      <nav className="pointer-events-auto w-full max-w-4xl bg-[#111113]/90 border border-neutral-800/90 shadow-[0_12px_40px_rgba(0,0,0,0.6)] backdrop-blur-2xl rounded-full p-2 pl-3 pr-3 flex items-center justify-between gap-4 transition-all duration-300 hover:border-neutral-700">
+    // z-40 seviyesine çekildi (CartDrawer z-50 olduğu için sepet açılınca navbar altta kalır)
+    <header className="fixed top-5 inset-x-0 z-40 flex justify-center px-4 pointer-events-none">
+      <nav className="pointer-events-auto relative w-full max-w-7xl h-14 rounded-full bg-[#0c0c0e]/90 backdrop-blur-xl border border-white/[0.08] shadow-[0_10px_35px_rgba(0,0,0,0.6)] flex items-center justify-between px-5 sm:px-8 font-sans">
         
-        {/* Sol Alan: Boyutu Kesin Sınırlandırılmış Logo */}
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="w-10 h-10 max-w-[40px] max-h-[40px] rounded-full flex items-center justify-center overflow-hidden hover:scale-105 transition-transform duration-200 shrink-0"
-            title="DexX Shop"
-          >
-            <img
-              src="/logo.png"
-              alt="DexX Shop Logo"
-              width={40}
-              height={40}
-              className="w-10 h-10 max-w-[40px] max-h-[40px] object-contain filter drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]"
-            />
-          </Link>
-          <Link href="/" className="font-extrabold text-sm tracking-wider text-white hover:text-red-400 transition hidden sm:inline-block">
-            DexX Shop
+        {/* SOL: LOGO & MARKA ADI */}
+        <div className="flex items-center gap-3 z-10 shrink-0">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/[0.1] flex items-center justify-center overflow-hidden shadow-sm group-hover:border-red-500/40 transition">
+              <span className="font-extrabold text-xs tracking-tighter text-white font-sans">
+                DX
+              </span>
+            </div>
+            
+            <span className="text-[15px] font-bold tracking-tight text-white group-hover:text-neutral-200 transition">
+              DexX <span className="font-medium text-neutral-400">Shop</span>
+            </span>
           </Link>
         </div>
 
-        {/* Menü Linkleri */}
-        <div className="flex items-center gap-1 sm:gap-6 text-xs sm:text-sm font-medium text-neutral-300">
-          <Link href="/" className="hover:text-white hover:bg-neutral-800/60 px-3 py-1.5 rounded-full transition-colors">
+        {/* ORTA: MERKEZE ORTALANAN MENÜ LİNKLERİ */}
+        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-8 text-[13.5px] font-medium tracking-tight">
+          <Link 
+            href="/" 
+            className="text-white hover:text-white transition font-medium"
+          >
             Anasayfa
           </Link>
-          <Link href="/#products" className="hover:text-white hover:bg-neutral-800/60 px-3 py-1.5 rounded-full transition-colors">
+          <Link 
+            href="/#products" 
+            className="text-[#9ca3af] hover:text-white transition font-medium"
+          >
             Ürünler
           </Link>
-          <Link href="/status" className="hover:text-white hover:bg-neutral-800/60 px-3 py-1.5 rounded-full transition-colors hidden sm:inline-block">
+          <Link 
+            href="/status" 
+            className="text-[#9ca3af] hover:text-white transition font-medium"
+          >
             Durum
           </Link>
-          <Link href="/support" className="hover:text-white hover:bg-neutral-800/60 px-3 py-1.5 rounded-full transition-colors hidden sm:inline-block">
+          <Link 
+            href="/support" 
+            className="text-[#9ca3af] hover:text-white transition font-medium"
+          >
             Destek
           </Link>
+        </div>
 
-          {hasAdminAccess && (
+        {/* SAĞ: YÖNETİM, CÜZDAN, SEPET & PROFİL */}
+        <div className="flex items-center gap-2.5 z-10 shrink-0">
+          
+          {/* Yönetici Rozeti */}
+          {isOwnerOrAdmin && (
             <Link
               href="/admin"
-              className="text-red-400 hover:text-red-300 hover:bg-red-950/50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5 font-semibold text-xs border border-red-900/40"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-950/40 border border-red-800/60 text-red-400 hover:text-red-300 text-xs font-medium tracking-tight hover:bg-red-900/40 transition mr-1"
             >
               <span>🛡️</span>
               <span>Yönetim</span>
             </Link>
           )}
-        </div>
 
-        {/* Sağ: Canlı Sepet & Profil/Giriş */}
-        <div className="flex items-center gap-2">
-          <CartButton />
+          {/* Cüzdan Rozeti */}
+          {user && (
+            <Link
+              href="/profile"
+              className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#1c0d0f] border border-red-900/40 hover:border-red-600/60 transition group cursor-pointer"
+            >
+              <div className="w-5 h-5 rounded-md bg-red-950/80 border border-red-800/60 flex items-center justify-center text-red-400 group-hover:text-red-300 transition">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </div>
 
-          {user ? (
-            <div className="flex items-center gap-2">
-              <Link
-                href="/profile"
-                className="bg-white hover:bg-neutral-200 text-black text-xs font-semibold px-4 py-2 rounded-full transition-all duration-200 flex items-center gap-2 shadow-sm"
-              >
-                <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
-                <span>@{user.username}</span>
-              </Link>
+              <span className="text-xs font-bold text-white tracking-tight">
+                ${Number(balance).toFixed(2)}
+              </span>
 
-              <form action={logoutAction} className="inline-flex">
-                <button
-                  type="submit"
-                  title="Çıkış Yap"
-                  className="w-9 h-9 rounded-full bg-neutral-900 border border-neutral-800 hover:border-red-900 hover:text-red-400 text-neutral-400 flex items-center justify-center text-xs transition cursor-pointer"
-                >
-                  ✕
-                </button>
-              </form>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Link
-                href="/login"
-                className="text-neutral-300 hover:text-white text-xs sm:text-sm font-medium px-3 py-1.5 transition hidden sm:inline-block"
-              >
-                Giriş Yap
-              </Link>
-              <Link
-                href="/register"
-                className="bg-white hover:bg-neutral-200 text-black text-xs sm:text-sm font-semibold px-4 sm:px-5 py-2 rounded-full transition-all duration-200 shadow-sm"
-              >
-                Kayıt Ol
-              </Link>
-            </div>
+              <div className="w-4 h-4 rounded-full bg-red-600/80 group-hover:bg-red-500 text-white flex items-center justify-center text-[11px] font-bold leading-none transition">
+                +
+              </div>
+            </Link>
           )}
+
+          {/* Sepet Butonu */}
+          <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-white/[0.04] hover:bg-red-950/40 border border-white/[0.06] hover:border-red-900/50 transition text-neutral-300 hover:text-red-400 cursor-pointer">
+            <Suspense fallback={<div className="w-4 h-4" />}>
+              <CartButton />
+            </Suspense>
+          </div>
+
+          {/* Profil Butonu (Sağdaki X logout butonu tamamen kaldırıldı) */}
+          {user ? (
+            <Link
+              href="/profile"
+              title={`Profil: @${user.username || user.email}`}
+              className="w-8 h-8 rounded-full bg-white/[0.04] hover:bg-red-950/40 border border-white/[0.06] hover:border-red-900/50 flex items-center justify-center text-neutral-300 hover:text-red-400 transition"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="px-4 py-1.5 rounded-full bg-white text-black hover:bg-neutral-200 text-xs font-semibold tracking-tight transition shadow-sm ml-1"
+            >
+              Giriş Yap
+            </Link>
+          )}
+
         </div>
+
       </nav>
     </header>
   );

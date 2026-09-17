@@ -1,0 +1,26 @@
+[
+  {
+    "id": "LIC-92E166",
+    "userId": "1789677418592",
+    "key": "DEXX-3F90-5129-43F6-6FB2",
+    "productTitle": "DexX External Cheat",
+    "game": "GLOBAL",
+    "tier": "Aylık",
+    "durationDays": 30,
+    "activatedAt": "2026-09-17T20:38:44.961Z",
+    "expiresAt": "2026-10-17T20:38:44.961Z",
+    "status": "active"
+  },
+  {
+    "id": "LIC-47C317",
+    "userId": "1789571651176",
+    "key": "DEXX-E1CE-10C5-549F-BDAA",
+    "productTitle": "DexX External Cheat",
+    "game": "GLOBAL",
+    "tier": "Haftalık",
+    "durationDays": 7,
+    "activatedAt": "2026-09-17T20:27:03.775Z",
+    "expiresAt": "2026-09-24T20:27:03.775Z",
+    "status": "active"
+  }
+]

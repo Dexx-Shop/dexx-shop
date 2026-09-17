@@ -1,0 +1,52 @@
+[
+  {
+    "code": "DEXX-BF97-E3EC-E11C",
+    "amount": 125,
+    "isUsed": true,
+    "createdAt": "2026-09-17T20:37:48.722Z",
+    "usedBy": "1789677418592",
+    "usedAt": "2026-09-17T20:37:53.539Z"
+  },
+  {
+    "code": "DEXX-2FE3-A15C-F487",
+    "amount": 1,
+    "isUsed": true,
+    "createdAt": "2026-09-17T20:18:24.969Z",
+    "usedBy": "1789571651176",
+    "usedAt": "2026-09-17T20:18:30.673Z"
+  },
+  {
+    "code": "DEXX-C3EC-AB6A-1443",
+    "amount": 12,
+    "isUsed": true,
+    "createdAt": "2026-09-17T20:03:55.311Z",
+    "usedBy": "1789571651176",
+    "usedAt": "2026-09-17T20:04:01.686Z"
+  },
+  {
+    "code": "DEXX-51BA-6112-68A7",
+    "amount": 250,
+    "isUsed": true,
+    "createdAt": "2026-09-17T20:01:02.676Z",
+    "used": true,
+    "usedBy": "dexxmarkett@gmail.com",
+    "usedAt": "2026-09-17T20:01:07.851Z"
+  },
+  {
+    "code": "DEXX-E1C2-A905-6201",
+    "amount": 25,
+    "isUsed": true,
+    "createdAt": "2026-09-17T20:00:37.450Z",
+    "used": true,
+    "usedBy": "dexxmarkett@gmail.com",
+    "usedAt": "2026-09-17T20:00:43.997Z"
+  },
+  {
+    "code": "DEXX-792A-CD7F-503A",
+    "amount": 100,
+    "isUsed": true,
+    "createdAt": "2026-09-16T22:15:21.700Z",
+    "usedBy": "1789571651176",
+    "usedAt": "2026-09-16T22:15:31.681Z"
+  }
+]

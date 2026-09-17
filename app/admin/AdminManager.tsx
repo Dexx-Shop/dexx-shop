@@ -10,7 +10,7 @@ export default function AdminManager({
   isOwner
 }: {
   admins: User[];
-  currentUserId: string;
+  currentUserId?: string;
   isOwner: boolean;
 }) {
   const [email, setEmail] = useState('');

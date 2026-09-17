@@ -70,3 +70,55 @@ export async function sendPasswordResetMail(email: string, resetLink: string): P
     return false;
   }
 }
+
+// Yeni: Satın Alınan Lisans Anahtarını Gönderen Fonksiyon
+export async function sendLicenseEmail(to: string, productTitle: string, tier: string, licenseKey: string): Promise<boolean> {
+  if (!process.env.SMTP_EMAIL || !process.env.SMTP_PASSWORD) {
+    console.log(`\n========================================`);
+    console.log(`[TEST MODU] ${to} İçin Satın Alınan Lisans:`);
+    console.log(`Ürün: ${productTitle} (${tier})`);
+    console.log(`Key: ${licenseKey}`);
+    console.log(`========================================\n`);
+    return true;
+  }
+
+  try {
+    await transporter.sendMail({
+      from: `"DexX Shop" <${process.env.SMTP_EMAIL}>`,
+      to,
+      subject: `DexX Shop - Lisans Teslimatı: ${productTitle}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; background-color: #09090b; color: #ffffff; padding: 30px; border-radius: 16px; max-width: 540px; margin: auto; border: 1px solid #27272a;">
+          <h2 style="color: #ef4444; margin-bottom: 8px; font-size: 22px;">Siparişiniz Tamamlandı!</h2>
+          <p style="color: #a1a1aa; font-size: 14px; line-height: 1.5;">
+            Merhaba, <strong>DexX Shop</strong> üzerinden yaptığınız alışveriş onaylandı. Dijital lisans anahtarınız aşağıdadır:
+          </p>
+
+          <div style="background-color: #18181b; border: 1px solid #3f3f46; border-radius: 12px; padding: 20px; margin: 20px 0;">
+            <p style="margin: 0 0 6px 0; font-size: 11px; color: #71717a; text-transform: uppercase;">Ürün & Paket</p>
+            <h3 style="margin: 0 0 4px 0; font-size: 17px; color: #ffffff;">${productTitle}</h3>
+            <span style="color: #ef4444; font-size: 13px; font-weight: bold;">Süre: ${tier}</span>
+
+            <div style="margin-top: 16px; padding: 14px; background-color: #09090b; border: 1px dashed #ef4444; border-radius: 8px; text-align: center;">
+              <p style="margin: 0 0 6px 0; font-size: 11px; color: #a1a1aa; text-transform: uppercase;">Lisans Anahtarınız</p>
+              <code style="font-size: 16px; color: #ef4444; font-weight: bold; letter-spacing: 1.5px;">${licenseKey}</code>
+            </div>
+          </div>
+
+          <p style="color: #a1a1aa; font-size: 13px; line-height: 1.5;">
+            Bu anahtarı profilinizdeki <strong>"Lisans Anahtarı Tanımla"</strong> kutusuna girerek üyeliğinizi hemen başlatabilirsiniz.
+          </p>
+
+          <hr style="border: 0; border-top: 1px solid #27272a; margin: 20px 0;" />
+          <p style="color: #71717a; font-size: 11px; text-align: center; margin: 0;">
+            Teknik destek ve kurulum için Discord: <a href="https://discord.gg/P4hymgPn3R" style="color: #ef4444; text-decoration: none;">https://discord.gg/P4hymgPn3R</a>
+          </p>
+        </div>
+      `
+    });
+    return true;
+  } catch (error) {
+    console.error('Lisans maili gönderme hatası:', error);
+    return false;
+  }
+}

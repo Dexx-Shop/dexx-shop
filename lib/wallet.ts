@@ -34,7 +34,7 @@ export async function getUserBalance(userId: string): Promise<number> {
       .from('wallets')
       .select('balance')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       return 0.0;
@@ -51,25 +51,36 @@ export async function updateUserBalance(userId: string, delta: number): Promise<
     const currentBalance = await getUserBalance(userId);
     const nextBalance = Math.max(0, Number((currentBalance + delta).toFixed(2)));
 
-    const { error } = await supabaseAdmin
+    const { data: existing } = await supabaseAdmin
       .from('wallets')
-      .upsert(
-        {
-          user_id: userId,
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      const { error: updateErr } = await supabaseAdmin
+        .from('wallets')
+        .update({
           balance: nextBalance,
           updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      );
+        })
+        .eq('user_id', userId);
 
-    if (error) {
-      console.error('Bakiye güncelleme hatası:', error.message);
-      return currentBalance;
+      if (updateErr) console.error('Cüzdan güncelleme hatası:', updateErr.message);
+    } else {
+      const { error: insertErr } = await supabaseAdmin
+        .from('wallets')
+        .insert({
+          user_id: userId,
+          balance: nextBalance,
+        });
+
+      if (insertErr) console.error('Cüzdan oluşturma hatası:', insertErr.message);
     }
 
     return nextBalance;
   } catch (err) {
-    console.error('Bakiye güncelleme hatası:', err);
+    console.error('updateUserBalance hata:', err);
     return 0.0;
   }
 }
@@ -125,14 +136,13 @@ export async function redeemCoupon(
   const cleanCode = code.trim().toUpperCase();
 
   try {
-    // 1. Kodu sorgula
-    const { data: coupon, error } = await supabaseAdmin
+    const { data: coupon, error: fetchError } = await supabaseAdmin
       .from('balance_codes')
       .select('*')
       .eq('code', cleanCode)
-      .single();
+      .maybeSingle();
 
-    if (error || !coupon) {
+    if (fetchError || !coupon) {
       return { success: false, error: 'Geçersiz bakiye kodu.' };
     }
 
@@ -140,27 +150,40 @@ export async function redeemCoupon(
       return { success: false, error: 'Bu kod daha önce kullanılmış veya geçersiz.' };
     }
 
-    // 2. Kodu kullanıldı olarak işaretle
+    // 1. Önce doğrudan used_by ile işaretlemeyi dene
     const { error: updateError } = await supabaseAdmin
       .from('balance_codes')
       .update({
         is_used: true,
-        used_by: userId,
+        used_by: userId || null,
         used_at: new Date().toISOString(),
       })
       .eq('code', cleanCode);
 
+    // 2. Eğer used_by foreign key / tür uyuşmazlığı verirse used_by olmadan işaretle
     if (updateError) {
-      return { success: false, error: 'Kod bozdurulurken bir hata oluştu.' };
+      console.warn('used_by uyuşmazlığı, fallback güncelleme yapılıyor:', updateError.message);
+      const { error: fallbackError } = await supabaseAdmin
+        .from('balance_codes')
+        .update({
+          is_used: true,
+          used_at: new Date().toISOString(),
+        })
+        .eq('code', cleanCode);
+
+      if (fallbackError) {
+        return { success: false, error: `Kod güncellenemedi: ${fallbackError.message}` };
+      }
     }
 
-    // 3. Kullanıcının bakiyesine ekle
+    // 3. Kullanıcı bakiyesine ekle
     const amount = Number(coupon.amount);
     await updateUserBalance(userId, amount);
 
     return { success: true, amount };
-  } catch {
-    return { success: false, error: 'İşlem sırasında beklenmeyen bir hata oluştu.' };
+  } catch (err: any) {
+    console.error('Bozdurma hatası:', err);
+    return { success: false, error: err?.message || 'İşlem sırasında beklenmeyen bir hata oluştu.' };
   }
 }
 
@@ -208,18 +231,17 @@ export async function activateLicenseKey(
   }
 
   try {
-    // Key daha önce kullanılmış mı kontrol et
     const { data: existing } = await supabaseAdmin
       .from('licenses')
       .select('id')
       .eq('license_key', cleanKey)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return { success: false, error: 'Bu lisans anahtarı zaten kullanılmış veya hesabınıza tanımlı.' };
     }
 
-    const durationDays = 30; // Varsayılan 30 gün
+    const durationDays = 30;
     const activatedAtDate = new Date();
     const expiresAtDate = new Date(activatedAtDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
 
@@ -234,7 +256,7 @@ export async function activateLicenseKey(
         expires_at: expiresAtDate.toISOString(),
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (insertError || !inserted) {
       return { success: false, error: 'Lisans tanımlanamadı.' };

@@ -11,3 +11,29 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   overflow-x: hidden;
 }
+
+/* Google Translate İstenmeyen Tüm Barları ve Çerçeveleri Gizle */
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+iframe.goog-te-banner-frame,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+.skiptranslate:not(.dexx-lang-btn) {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body {
+  top: 0px !important;
+  position: static !important;
+}
+
+/* Çevrilen kelimelerdeki çirkin alt çizgileri ve vurguları sil */
+font[style] {
+  background: transparent !important;
+  box-shadow: none !important;
+}

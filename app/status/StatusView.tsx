@@ -22,7 +22,7 @@ export default function StatusView({ initialProducts }: { initialProducts: Produ
   }, {} as Record<string, Product[]>);
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white selection:bg-red-600 selection:text-white pb-24 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white pb-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto text-center pt-4 sm:pt-8 pb-10">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-300 mb-6 shadow-inner">
           <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>

@@ -1,81 +1,62 @@
-import fs from 'fs';
-import Link from 'next/link';
-import path from 'path';
+"use client";
+import { SparklesCore } from "../ui/sparkles";
 
-function getHeroSettings() {
-  try {
-    const filePath = path.join(process.cwd(), 'data', 'settings.json');
-    if (fs.existsSync(filePath)) {
-      return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    }
-  } catch {}
-  return {
-    heroBadge: 'DexX Kernel v2.4 Yayında',
-    heroUserCount: '2,000+'
-  };
-}
-
-export default function HeroSection() {
-  const settings = getHeroSettings();
-
+export function HeroSection() {
   return (
-    <section className="relative w-full min-h-[75vh] flex flex-col items-center justify-center text-center px-4 pt-20 pb-16 overflow-hidden">
+    <section className="relative w-full min-h-screen bg-black flex flex-col items-center justify-center overflow-hidden select-none pt-16">
       
-      {/* 1. ARKA PLAN: SOĞUK DUMAN VE SİS */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden">
-        <div className="w-[680px] h-[380px] rounded-full blur-[140px] opacity-20 bg-gradient-to-t from-neutral-200 via-neutral-400 to-transparent animate-smoke pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_60%_at_50%_45%,transparent_20%,#080809_85%)]" />
+      {/* ÜST ROZET */}
+      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-red-500/30 bg-red-950/20 mb-8 backdrop-blur-md z-20 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+        <span className="text-[11px] font-semibold tracking-wider uppercase text-red-400">
+          Official Store
+        </span>
       </div>
 
-      {/* 2. İÇERİK BLOĞU */}
-      <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
-        
-        {/* Üst Hap Rozet (Admin Panelden Değiştirilebilir) */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] backdrop-blur-md mb-8 hover:border-white/[0.15] transition shadow-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs font-normal text-neutral-300 tracking-tight">
-            {settings.heroBadge || 'DexX Kernel v2.4 Yayında'}
-          </span>
-        </div>
+      {/* ANA BAŞLIK */}
+      <h1 className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tight text-center relative z-20">
+        <span className="text-white drop-shadow-[0_2px_20px_rgba(255,255,255,0.2)]">
+          DexX
+        </span>{" "}
+        <span className="bg-gradient-to-b from-red-500 via-red-600 to-red-700 bg-clip-text text-transparent drop-shadow-[0_0_40px_rgba(239,68,68,0.8)]">
+          Shop
+        </span>
+      </h1>
 
-        {/* Devasa Başlık */}
-        <h1 className="text-4xl sm:text-6xl lg:text-[76px] font-semibold tracking-[-0.035em] leading-[1.04] text-white">
-          Daha hızlı teslim. <br />
-          <span className="text-neutral-500 font-medium">Sessizce ve güvenle yönetin.</span>
-        </h1>
+      {/* LAZER IŞIKLARI & PARÇACIK HAVUZU */}
+      <div className="w-[36rem] sm:w-[48rem] md:w-[56rem] h-48 relative -mt-2">
+        {/* Neon Kırmızı Çizgiler */}
+        <div className="absolute inset-x-20 top-0 bg-gradient-to-r from-transparent via-red-600 to-transparent h-[2px] w-3/4 blur-sm" />
+        <div className="absolute inset-x-20 top-0 bg-gradient-to-r from-transparent via-red-500 to-transparent h-px w-3/4" />
+        <div className="absolute inset-x-60 top-0 bg-gradient-to-r from-transparent via-rose-400 to-transparent h-[4px] w-1/4 blur-sm" />
+        <div className="absolute inset-x-60 top-0 bg-gradient-to-r from-transparent via-rose-300 to-transparent h-px w-1/4" />
 
-        {/* Açıklama Yazısı */}
-        <p className="mt-6 text-sm sm:text-base text-neutral-400 max-w-xl font-normal leading-relaxed">
-          En zorlu güvenlik altyapıları için geliştirilmiş; sıfır gecikme, donanım kimliği koruması ve anında teslim VIP lisans çözümleri.
-        </p>
+        {/* Parçacıklar */}
+        <SparklesCore
+          background="transparent"
+          minSize={0.4}
+          maxSize={1.2}
+          particleDensity={1000}
+          className="w-full h-full"
+          particleColor="#EF4444"
+        />
 
-        {/* Eylem Butonları */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <a
-            href="#products"
-            className="px-6 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-black text-xs font-semibold tracking-tight transition flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.12)] group"
-          >
-            <span>Ürünleri İnceleyin</span>
-            <span className="text-neutral-500 group-hover:translate-x-0.5 transition-transform">→</span>
-          </a>
-
-          <Link
-            href="/profile"
-            className="px-5 py-2.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.15] text-neutral-300 hover:text-white text-xs font-medium tracking-tight transition backdrop-blur-sm"
-          >
-            Konsol Girişi
-          </Link>
-        </div>
-
-        {/* Alt Güven Rozeti (Avatarlar Kaldırıldı, Sadece Minimalist Sayaç) */}
-        <div className="mt-12 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.02] border border-white/[0.05]">
-          <span className="w-1.5 h-1.5 rounded-full bg-neutral-500" />
-          <p className="text-xs text-neutral-500 font-normal">
-            Platform genelinde <span className="text-neutral-200 font-medium">{settings.heroUserCount || '2,000+'}</span> aktif lisanslı kullanıcı
-          </p>
-        </div>
-
+        {/* Maske */}
+        <div className="absolute inset-0 w-full h-full bg-black [mask-image:radial-gradient(380px_200px_at_top,transparent_20%,white)] pointer-events-none" />
       </div>
+
+      {/* AŞAĞI KAYDIR GÖSTERGESİ (EKRANIN EN ALTINDA) */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-20 opacity-60 hover:opacity-100 transition-opacity">
+        <span className="text-[11px] font-medium tracking-widest text-neutral-400 uppercase">
+          Ürünleri Keşfet
+        </span>
+        <div className="w-5 h-8 rounded-full border border-white/20 flex items-start justify-center p-1">
+          <div className="w-1 h-2 rounded-full bg-red-500 animate-bounce" />
+        </div>
+      </div>
+
     </section>
   );
 }
+
+export default HeroSection;

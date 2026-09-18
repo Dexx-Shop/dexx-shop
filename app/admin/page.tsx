@@ -42,7 +42,7 @@ export default async function AdminPage() {
   const orderLogs = await getOrderLogsAction();
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white selection:bg-red-600 selection:text-white pb-24 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white pb-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto pt-6 space-y-10">
         {/* Üst Başlık */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800 pb-6">

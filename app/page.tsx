@@ -1,4 +1,5 @@
 import HeroSection from 'components/hero/HeroSection';
+import { LayoutTextFlip } from "components/ui/layout-text-flip";
 import { getProducts } from 'lib/products';
 import Link from 'next/link';
 
@@ -8,25 +9,33 @@ export default async function HomePage() {
   const products = await getProducts();
 
   return (
-    <div className="bg-[#080809] text-[#ededed] min-h-screen selection:bg-white selection:text-black pt-4">
-      {/* Hero Alanı */}
-      <HeroSection />
+// app/page.tsx içindeki en dış div:
+<div className="bg-black text-[#ededed] min-h-screen selection:bg-red-600 selection:text-white pt-4">
+  {/* Hero Alanı */}
+  <HeroSection />
 
-      {/* Ürün Kataloğu */}
-      <main id="products" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-white/[0.06]">
-        <div className="flex items-baseline justify-between mb-10">
-          <div>
-            <h2 className="text-xl font-medium tracking-tight text-white">
-              Mevcut Ürünler
-            </h2>
-            <p className="text-xs text-neutral-500 mt-1">
-              Kernel düzeyinde donanım korumalı yazılımlar.
-            </p>
-          </div>
-          <span className="text-xs text-neutral-500 font-normal">
-            {products.length} Aktif Ürün
-          </span>
-        </div>
+  {/* Ürün Kataloğu */}
+  <main id="products" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-white/[0.06]">
+    {/* BAŞLIK VE FLIP ANİMASYONU */}
+    <div className="flex flex-col items-center justify-center text-center mb-16 select-none relative">
+      <LayoutTextFlip
+        text="Mevcut"
+        words={["Ürünler", "Hileler", "Spooferlar"]}
+        duration={2500}
+      />
+
+      {/* YAZIDAN BİRAZ UZUN İNCE NEON ÇİZGİ */}
+      <div className="relative w-64 sm:w-80 h-[2px] mt-5">
+        {/* Arkadaki hafif ışıma */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-600 to-transparent h-full w-full blur-[2px]" />
+        {/* Asıl net ince çizgi */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-500 to-transparent h-px w-full" />
+      </div>
+
+      <p className="mt-4 text-sm sm:text-base text-neutral-400 max-w-lg">
+        {/* İsteğe bağlı açıklama metni */}
+      </p>
+    </div>
 
         {/* Soğuk & Mat Cam Kartlar */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

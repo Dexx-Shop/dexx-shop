@@ -1,6 +1,8 @@
 import CartButton from 'components/cart/CartButton';
+import LanguageToggle from 'components/LanguageToggle';
 import { getCurrentUser } from 'lib/auth';
 import { getUserBalance } from 'lib/wallet';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Suspense } from 'react';
 
@@ -19,20 +21,31 @@ export async function Navbar() {
 
   return (
     // z-40 seviyesine çekildi (CartDrawer z-50 olduğu için sepet açılınca navbar altta kalır)
-    <header className="fixed top-5 inset-x-0 z-40 flex justify-center px-4 pointer-events-none">
+// components/navbar/index.tsx dosyasında en dış header:
+<header className="fixed top-7 inset-x-0 z-40 flex justify-center px-4 sm:px-6 pointer-events-none">
       <nav className="pointer-events-auto relative w-full max-w-7xl h-14 rounded-full bg-[#0c0c0e]/90 backdrop-blur-xl border border-white/[0.08] shadow-[0_10px_35px_rgba(0,0,0,0.6)] flex items-center justify-between px-5 sm:px-8 font-sans">
         
         {/* SOL: LOGO & MARKA ADI */}
         <div className="flex items-center gap-3 z-10 shrink-0">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-neutral-800 to-neutral-900 border border-white/[0.1] flex items-center justify-center overflow-hidden shadow-sm group-hover:border-red-500/40 transition">
-              <span className="font-extrabold text-xs tracking-tighter text-white font-sans">
-                DX
-              </span>
+          <Link href="/" className="flex items-center gap-2.5 group select-none">
+            <div className="relative w-8 h-8 flex items-center justify-center">
+              <Image
+                src="/logo.png"
+                alt="DexX Logo"
+                width={32}
+                height={32}
+                className="w-full h-full object-contain filter drop-shadow-[0_0_10px_rgba(239,68,68,0.5)] group-hover:drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] group-hover:scale-105 transition-all duration-300"
+                priority
+              />
             </div>
             
-            <span className="text-[15px] font-bold tracking-tight text-white group-hover:text-neutral-200 transition">
-              DexX <span className="font-medium text-neutral-400">Shop</span>
+            <span className="text-[17px] tracking-tight font-extrabold flex items-center transition-all duration-200">
+              <span className="text-red-500 drop-shadow-[0_0_12px_rgba(239,68,68,0.6)] group-hover:text-red-400">
+                DexX
+              </span>
+              <span className="text-white ml-1.5 font-bold tracking-normal drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] group-hover:text-neutral-100">
+                Shop
+              </span>
             </span>
           </Link>
         </div>
@@ -65,7 +78,7 @@ export async function Navbar() {
           </Link>
         </div>
 
-        {/* SAĞ: YÖNETİM, CÜZDAN, SEPET & PROFİL */}
+        {/* SAĞ: YÖNETİM, CÜZDAN, SEPET, PROFİL & DİL BUTONU */}
         <div className="flex items-center gap-2.5 z-10 shrink-0">
           
           {/* Yönetici Rozeti */}
@@ -108,7 +121,7 @@ export async function Navbar() {
             </Suspense>
           </div>
 
-          {/* Profil Butonu (Sağdaki X logout butonu tamamen kaldırıldı) */}
+          {/* Profil Butonu */}
           {user ? (
             <Link
               href="/profile"
@@ -127,6 +140,10 @@ export async function Navbar() {
               Giriş Yap
             </Link>
           )}
+
+          {/* DİL DEĞİŞTİRME BUTONU (TR / EN) */}
+          {/* DİL DEĞİŞTİRME BUTONU (TR / EN) */}
+<LanguageToggle />
 
         </div>
 

@@ -27,7 +27,7 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white selection:bg-red-600 selection:text-white pb-24 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white pb-24 px-4 sm:px-6 lg:px-8">
       {/* Üst Kısım / Hero */}
       <div className="max-w-4xl mx-auto text-center pt-4 sm:pt-8 pb-10">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-300 mb-6 shadow-inner">
@@ -63,9 +63,10 @@ export default function SupportPage() {
             <div className="w-10 h-10 rounded-2xl bg-neutral-800 flex items-center justify-center text-lg">
               ⏱️
             </div>
-            <h3 className="text-base font-bold text-white">Çalışma Saatleri</h3>
+            
+            <h3 className="text-base font-bold text-white">Discord Ticketlarına Ekibimiz Çok Daha Hızlı Yardımcı Olmaktadır!!!</h3>
             <p className="text-xs text-neutral-400 leading-relaxed">
-              Haftanın her günü kesintisiz teknik destek.
+              Eğer Acil Destek İhtiyacınız Varsa Lütfen Discord Üzerinden İletişime Geçiniz
             </p>
             <span className="text-[11px] text-emerald-400 font-semibold block">
               ● Ortalama Yanıt: 15 Dakika

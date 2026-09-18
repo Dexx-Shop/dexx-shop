@@ -1,5 +1,11 @@
 [
   {
+    "code": "DEXX-AB0E-EB00-5746",
+    "amount": 25,
+    "isUsed": false,
+    "createdAt": "2026-09-17T22:04:02.308Z"
+  },
+  {
     "code": "DEXX-BF97-E3EC-E11C",
     "amount": 125,
     "isUsed": true,

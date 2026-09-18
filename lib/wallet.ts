@@ -1,20 +1,5 @@
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
-
-const DATA_DIR = path.join(process.cwd(), 'data');
-const WALLET_FILE = path.join(DATA_DIR, 'wallets.json');
-const COUPONS_FILE = path.join(DATA_DIR, 'coupons.json');
-const LICENSES_FILE = path.join(DATA_DIR, 'licenses.json');
-const ORDERS_FILE = path.join(DATA_DIR, 'orders.json');
-
-function ensureFiles() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(WALLET_FILE)) fs.writeFileSync(WALLET_FILE, JSON.stringify({}));
-  if (!fs.existsSync(COUPONS_FILE)) fs.writeFileSync(COUPONS_FILE, JSON.stringify([]));
-  if (!fs.existsSync(LICENSES_FILE)) fs.writeFileSync(LICENSES_FILE, JSON.stringify([]));
-  if (!fs.existsSync(ORDERS_FILE)) fs.writeFileSync(ORDERS_FILE, JSON.stringify([]));
-}
+import { supabaseAdmin } from './supabase';
 
 export interface Coupon {
   code: string;
@@ -44,90 +29,169 @@ export function generateCouponCode(): string {
 }
 
 export async function getUserBalance(userId: string): Promise<number> {
-  ensureFiles();
   try {
-    const raw = fs.readFileSync(WALLET_FILE, 'utf-8');
-    const data = JSON.parse(raw);
-    return data[userId] || 0.0;
+    const { data, error } = await supabaseAdmin
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !data) {
+      return 0.0;
+    }
+
+    return Number(data.balance) || 0.0;
   } catch {
     return 0.0;
   }
 }
 
 export async function updateUserBalance(userId: string, delta: number): Promise<number> {
-  ensureFiles();
-  const raw = fs.readFileSync(WALLET_FILE, 'utf-8');
-  const data = JSON.parse(raw);
-  const current = data[userId] || 0.0;
-  const next = Math.max(0, Number((current + delta).toFixed(2)));
-  data[userId] = next;
-  fs.writeFileSync(WALLET_FILE, JSON.stringify(data, null, 2));
-  return next;
+  try {
+    const currentBalance = await getUserBalance(userId);
+    const nextBalance = Math.max(0, Number((currentBalance + delta).toFixed(2)));
+
+    const { error } = await supabaseAdmin
+      .from('wallets')
+      .upsert(
+        {
+          user_id: userId,
+          balance: nextBalance,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      );
+
+    if (error) {
+      console.error('Bakiye güncelleme hatası:', error.message);
+      return currentBalance;
+    }
+
+    return nextBalance;
+  } catch (err) {
+    console.error('Bakiye güncelleme hatası:', err);
+    return 0.0;
+  }
 }
 
 export async function getCoupons(): Promise<Coupon[]> {
-  ensureFiles();
   try {
-    const raw = fs.readFileSync(COUPONS_FILE, 'utf-8');
-    return JSON.parse(raw);
+    const { data, error } = await supabaseAdmin
+      .from('balance_codes')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+
+    return data.map((c) => ({
+      code: c.code,
+      amount: Number(c.amount),
+      isUsed: c.is_used,
+      usedBy: c.used_by,
+      usedAt: c.used_at,
+      createdAt: c.created_at,
+    }));
   } catch {
     return [];
   }
 }
 
 export async function createCoupon(amount: number): Promise<Coupon> {
-  ensureFiles();
-  const coupons = await getCoupons();
   const newCoupon: Coupon = {
     code: generateCouponCode(),
     amount: Number(amount.toFixed(2)),
     isUsed: false,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
-  coupons.unshift(newCoupon);
-  fs.writeFileSync(COUPONS_FILE, JSON.stringify(coupons, null, 2));
+
+  const { error } = await supabaseAdmin.from('balance_codes').insert({
+    code: newCoupon.code,
+    amount: newCoupon.amount,
+    is_used: false,
+    created_at: newCoupon.createdAt,
+  });
+
+  if (error) {
+    throw new Error(`Kupon oluşturulamadı: ${error.message}`);
+  }
+
   return newCoupon;
 }
 
-export async function redeemCoupon(userId: string, code: string): Promise<{ success: boolean; amount?: number; error?: string }> {
-  ensureFiles();
+export async function redeemCoupon(
+  userId: string,
+  code: string
+): Promise<{ success: boolean; amount?: number; error?: string }> {
   const cleanCode = code.trim().toUpperCase();
-  const coupons = await getCoupons();
 
-  const couponIndex = coupons.findIndex((c) => c.code === cleanCode);
-  if (couponIndex === -1) {
-    return { success: false, error: 'Geçersiz bakiye kodu.' };
+  try {
+    // 1. Kodu sorgula
+    const { data: coupon, error } = await supabaseAdmin
+      .from('balance_codes')
+      .select('*')
+      .eq('code', cleanCode)
+      .single();
+
+    if (error || !coupon) {
+      return { success: false, error: 'Geçersiz bakiye kodu.' };
+    }
+
+    if (coupon.is_used) {
+      return { success: false, error: 'Bu kod daha önce kullanılmış veya geçersiz.' };
+    }
+
+    // 2. Kodu kullanıldı olarak işaretle
+    const { error: updateError } = await supabaseAdmin
+      .from('balance_codes')
+      .update({
+        is_used: true,
+        used_by: userId,
+        used_at: new Date().toISOString(),
+      })
+      .eq('code', cleanCode);
+
+    if (updateError) {
+      return { success: false, error: 'Kod bozdurulurken bir hata oluştu.' };
+    }
+
+    // 3. Kullanıcının bakiyesine ekle
+    const amount = Number(coupon.amount);
+    await updateUserBalance(userId, amount);
+
+    return { success: true, amount };
+  } catch {
+    return { success: false, error: 'İşlem sırasında beklenmeyen bir hata oluştu.' };
   }
-
-  const coupon = coupons[couponIndex];
-  if (!coupon || coupon.isUsed) {
-    return { success: false, error: 'Bu kod daha önce kullanılmış veya geçersiz.' };
-  }
-
-  coupon.isUsed = true;
-  coupon.usedBy = userId;
-  coupon.usedAt = new Date().toISOString();
-  coupons[couponIndex] = coupon;
-
-  fs.writeFileSync(COUPONS_FILE, JSON.stringify(coupons, null, 2));
-  await updateUserBalance(userId, coupon.amount);
-
-  return { success: true, amount: coupon.amount };
 }
 
 export async function getUserLicenses(userId: string): Promise<UserLicense[]> {
-  ensureFiles();
   try {
-    const raw = fs.readFileSync(LICENSES_FILE, 'utf-8');
-    const all: UserLicense[] = JSON.parse(raw);
-    const now = new Date().getTime();
+    const { data, error } = await supabaseAdmin
+      .from('licenses')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-    return all
-      .filter((l) => l.userId === userId)
-      .map((l) => ({
-        ...l,
-        status: new Date(l.expiresAt).getTime() < now ? 'expired' : 'active'
-      }));
+    if (error || !data) return [];
+
+    const now = Date.now();
+
+    return data.map((l) => ({
+      id: l.id,
+      userId: l.user_id,
+      key: l.license_key,
+      productTitle: l.product_id,
+      game: l.product_id.toUpperCase().includes('RUST')
+        ? 'RUST'
+        : l.product_id.toUpperCase().includes('FIVEM')
+        ? 'FIVEM'
+        : 'GLOBAL',
+      tier: l.duration || 'Standart',
+      durationDays: 1,
+      activatedAt: l.created_at,
+      expiresAt: l.expires_at || l.created_at,
+      status: l.expires_at && new Date(l.expires_at).getTime() < now ? 'expired' : 'active',
+    }));
   } catch {
     return [];
   }
@@ -137,74 +201,60 @@ export async function activateLicenseKey(
   userId: string,
   keyInput: string
 ): Promise<{ success: boolean; license?: UserLicense; error?: string }> {
-  ensureFiles();
   const cleanKey = keyInput.trim().toUpperCase();
 
   if (cleanKey.length < 8) {
     return { success: false, error: 'Geçersiz lisans anahtarı formatı.' };
   }
 
-  const licensesRaw = fs.readFileSync(LICENSES_FILE, 'utf-8');
-  const allLicenses: UserLicense[] = JSON.parse(licensesRaw);
-
-  if (allLicenses.some((l) => l.key === cleanKey)) {
-    return { success: false, error: 'Bu lisans anahtarı zaten hesabınıza tanımlanmış.' };
-  }
-
-  // Sipariş kütüğünden bu key'in tam detaylarını buluyoruz
-  let matchedTitle = 'DexX Private Modification';
-  let matchedTier = 'Günlük';
-  let matchedGame = 'GLOBAL';
-
   try {
-    const ordersRaw = fs.readFileSync(ORDERS_FILE, 'utf-8');
-    const orders = JSON.parse(ordersRaw);
-    for (const order of orders) {
-      const foundKey = order.keys?.find((k: any) => k.key === cleanKey);
-      if (foundKey) {
-        matchedTitle = foundKey.productTitle || matchedTitle;
-        matchedTier = foundKey.tier || matchedTier;
-        matchedGame =
-          foundKey.game ||
-          (matchedTitle.toUpperCase().includes('RUST')
-            ? 'RUST'
-            : matchedTitle.toUpperCase().includes('FIVEM')
-            ? 'FIVEM'
-            : matchedTitle.toUpperCase().includes('CS')
-            ? 'CS2'
-            : 'GLOBAL');
-        break;
-      }
+    // Key daha önce kullanılmış mı kontrol et
+    const { data: existing } = await supabaseAdmin
+      .from('licenses')
+      .select('id')
+      .eq('license_key', cleanKey)
+      .single();
+
+    if (existing) {
+      return { success: false, error: 'Bu lisans anahtarı zaten kullanılmış veya hesabınıza tanımlı.' };
     }
-  } catch {}
 
-  // Süre belirleme mantığı: Günlük -> 1 gün, Haftalık -> 7 gün, Aylık -> 30 gün
-  let durationDays = 1;
-  const tierLower = matchedTier.toLowerCase();
-  if (tierLower.includes('hafta')) {
-    durationDays = 7;
-  } else if (tierLower.includes('ay')) {
-    durationDays = 30;
+    const durationDays = 30; // Varsayılan 30 gün
+    const activatedAtDate = new Date();
+    const expiresAtDate = new Date(activatedAtDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
+    const { data: inserted, error: insertError } = await supabaseAdmin
+      .from('licenses')
+      .insert({
+        user_id: userId,
+        product_id: 'DexX Private Modification',
+        license_key: cleanKey,
+        duration: 'Aylık',
+        status: 'active',
+        expires_at: expiresAtDate.toISOString(),
+      })
+      .select()
+      .single();
+
+    if (insertError || !inserted) {
+      return { success: false, error: 'Lisans tanımlanamadı.' };
+    }
+
+    const newLicense: UserLicense = {
+      id: inserted.id,
+      userId: inserted.user_id,
+      key: inserted.license_key,
+      productTitle: inserted.product_id,
+      game: 'GLOBAL',
+      tier: inserted.duration,
+      durationDays,
+      activatedAt: inserted.created_at,
+      expiresAt: inserted.expires_at,
+      status: 'active',
+    };
+
+    return { success: true, license: newLicense };
+  } catch {
+    return { success: false, error: 'Lisans aktifleştirilirken hata oluştu.' };
   }
-
-  const activatedAtDate = new Date();
-  const expiresAtDate = new Date(activatedAtDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
-
-  const newLicense: UserLicense = {
-    id: `LIC-${crypto.randomBytes(3).toString('hex').toUpperCase()}`,
-    userId,
-    key: cleanKey,
-    productTitle: matchedTitle,
-    game: matchedGame,
-    tier: matchedTier,
-    durationDays,
-    activatedAt: activatedAtDate.toISOString(),
-    expiresAt: expiresAtDate.toISOString(),
-    status: 'active'
-  };
-
-  allLicenses.unshift(newLicense);
-  fs.writeFileSync(LICENSES_FILE, JSON.stringify(allLicenses, null, 2));
-
-  return { success: true, license: newLicense };
 }

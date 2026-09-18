@@ -406,7 +406,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
         
         <div className="flex flex-wrap items-center gap-3 mt-6">
           <a
-            href="https://dexx-shop.mysellauth.com/product/dexx-rust-external"
+            href="https://dexx-shop.mysellauth.com/products"
             target="_blank"
             rel="noopener noreferrer"
             className="px-5 py-2.5 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-bold tracking-tight transition cursor-pointer shadow-md inline-block"
@@ -423,12 +423,6 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
             </svg>
             <span>Bakiye Kodu Bozdur</span>
           </button>
-
-          <button
-            className="px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-xs font-semibold text-neutral-300 transition cursor-pointer"
-          >
-            Son İşlemler
-          </button>
         </div>
       </div>
 
@@ -442,24 +436,25 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
     {/* 1. Satır Ödeme Kartları */}
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       
-      {/* Kredi Kartı / Kripto - SellAuth Modal */}
-      <div
-        data-sellauth-shop-id="269723"
-        data-sellauth-product-id="dexx-rust-external"
-        className="relative bg-[#0b0b0e] border border-white/[0.08] hover:border-red-600/50 rounded-2xl p-5 flex flex-col items-center justify-center text-center transition cursor-pointer h-36 group hover:shadow-[0_0_20px_rgba(220,38,38,0.15)]"
-      >
-        <span className="absolute top-2 right-2 text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-800 text-emerald-400">
-          Aktif
-        </span>
-        <div className="w-12 h-8 rounded-md bg-neutral-800 border border-neutral-700 p-1 mb-3 flex flex-col justify-between group-hover:scale-105 group-hover:border-red-500/60 transition-transform">
-          <div className="w-3 h-2 rounded-[2px] bg-red-500" />
-        </div>
-        <h4 className="text-xs font-bold text-white tracking-tight">Kredi Kartı / Kripto</h4>
-        <p className="text-[10px] text-neutral-400 mt-0.5">Otomatik Yükleme</p>
-        <span className="text-[10px] text-neutral-400 group-hover:text-red-400 flex items-center gap-0.5 mt-0.5 transition">
-          <span>⚡ Hemen Yükle</span>
-        </span>
-      </div>
+      {/* Kredi Kartı / Kripto - SellAuth Bağlantısı */}
+<a
+  href="https://dexx-shop.mysellauth.com/products"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="relative bg-[#0b0b0e] border border-white/[0.08] hover:border-red-600/50 rounded-2xl p-5 flex flex-col items-center justify-center text-center transition cursor-pointer h-36 group hover:shadow-[0_0_20px_rgba(220,38,38,0.15)] no-underline"
+>
+  <span className="absolute top-2 right-2 text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-800 text-emerald-400">
+    Aktif
+  </span>
+  <div className="w-12 h-8 rounded-md bg-neutral-800 border border-neutral-700 p-1 mb-3 flex flex-col justify-between group-hover:scale-105 group-hover:border-red-500/60 transition-transform">
+    <div className="w-3 h-2 rounded-[2px] bg-red-500" />
+  </div>
+  <h4 className="text-xs font-bold text-white tracking-tight">Kredi Kartı / Kripto</h4>
+  <p className="text-[10px] text-neutral-400 mt-0.5">Otomatik Yükleme</p>
+  <span className="text-[10px] text-neutral-400 group-hover:text-red-400 flex items-center gap-0.5 mt-0.5 transition">
+    <span>⚡ Hemen Yükle</span>
+  </span>
+</a>
       {/* Kredi Kartı Global (Devre Dışı) */}
       <div className="relative bg-[#0b0b0e] border border-white/[0.04] rounded-2xl p-5 flex flex-col items-center justify-center text-center opacity-45 cursor-not-allowed select-none h-36 overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

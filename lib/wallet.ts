@@ -47,40 +47,39 @@ export async function getUserBalance(userId: string): Promise<number> {
 }
 
 export async function updateUserBalance(userId: string, delta: number): Promise<number> {
+  if (!userId) {
+    console.error('updateUserBalance: userId bulunamadı!');
+    return 0.0;
+  }
+
+  const cleanUserId = String(userId).trim();
+
   try {
-    const currentBalance = await getUserBalance(userId);
+    const currentBalance = await getUserBalance(cleanUserId);
     const nextBalance = Math.max(0, Number((currentBalance + delta).toFixed(2)));
 
-    const { data: existing } = await supabaseAdmin
+    // Upsert ile varsa güncelle, yoksa tek sorguda oluştur
+    const { data, error } = await supabaseAdmin
       .from('wallets')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (existing) {
-      const { error: updateErr } = await supabaseAdmin
-        .from('wallets')
-        .update({
+      .upsert(
+        {
+          user_id: cleanUserId,
           balance: nextBalance,
           updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', userId);
+        },
+        { onConflict: 'user_id' }
+      )
+      .select()
+      .single();
 
-      if (updateErr) console.error('Cüzdan güncelleme hatası:', updateErr.message);
-    } else {
-      const { error: insertErr } = await supabaseAdmin
-        .from('wallets')
-        .insert({
-          user_id: userId,
-          balance: nextBalance,
-        });
-
-      if (insertErr) console.error('Cüzdan oluşturma hatası:', insertErr.message);
+    if (error) {
+      console.error('Supabase wallets upsert hatası:', error.message, error.details);
+      return currentBalance;
     }
 
     return nextBalance;
   } catch (err) {
-    console.error('updateUserBalance hata:', err);
+    console.error('updateUserBalance beklenmeyen hata:', err);
     return 0.0;
   }
 }

@@ -2,6 +2,8 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { getCurrentUser } from './auth';
+import { sendLicenseEmail } from './mail';
+import { supabaseAdmin } from './supabase';
 import { getUserBalance, updateUserBalance } from './wallet';
 
 const ORDERS_FILE = path.join(process.cwd(), 'data', 'orders.json');
@@ -38,7 +40,8 @@ export async function processCartCheckout(
     return { success: false, error: 'Satın alım yapabilmek için giriş yapmalısınız.' };
   }
 
-  if (!email || !email.includes('@')) {
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail || !cleanEmail.includes('@')) {
     return { success: false, error: 'Geçerli bir teslimat e-posta adresi giriniz.' };
   }
 
@@ -59,23 +62,70 @@ export async function processCartCheckout(
   // 1. Bakiyeyi düş
   const newBalance = await updateUserBalance(user.id, -totalAmount);
 
-  // 2. Her bir ürün için lisans anahtarı üret
+  // 2. Her bir ürün için lisans anahtarı üret ve Supabase'e ekle
   const generatedKeys: PurchasedKey[] = [];
+  const licenseInserts = [];
+
   for (const item of items) {
     for (let i = 0; i < item.quantity; i++) {
+      const createdKey = generateLicenseKey('DEXX');
+      const tierName = item.tier || 'Standart Lisans';
+
       generatedKeys.push({
         productTitle: item.title,
-        tier: item.tier || 'Standart Lisans',
-        key: generateLicenseKey('DEXX')
+        tier: tierName,
+        key: createdKey
       });
+
+      // Lisans süresini belirleme
+      let days = 30;
+      const lowerTier = tierName.toLowerCase();
+      if (lowerTier.includes('gün')) days = 1;
+      else if (lowerTier.includes('hafta')) days = 7;
+      else if (lowerTier.includes('ay')) days = 30;
+
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+      // Supabase'e toplu yazmak için listeye alıyoruz
+      licenseInserts.push({
+        user_id: String(user.id).trim(),
+        product_id: item.title,
+        license_key: createdKey,
+        duration: tierName,
+        status: 'active',
+        expires_at: expiresAt.toISOString()
+      });
+
+      // E-posta gönderimi
+      try {
+        await sendLicenseEmail(cleanEmail, item.title, tierName, createdKey);
+      } catch (mailErr) {
+        console.error(`Mail gönderilemedi (${cleanEmail}):`, mailErr);
+      }
     }
   }
 
-  // 3. Siparişi kaydet
+  // 3. Lisansları doğrudan Supabase 'licenses' tablosuna kaydet
+  if (licenseInserts.length > 0) {
+    try {
+      const { error: insertError } = await supabaseAdmin
+        .from('licenses')
+        .insert(licenseInserts);
+
+      if (insertError) {
+        console.error('Supabase licenses insert hatası:', insertError.message);
+      }
+    } catch (dbErr) {
+      console.error('Supabase licenses insert beklenmeyen hata:', dbErr);
+    }
+  }
+
+  // 4. Sipariş yedeğini orders dosyasına kaydet
   try {
     const dir = path.dirname(ORDERS_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    
+
     let orders: any[] = [];
     if (fs.existsSync(ORDERS_FILE)) {
       orders = JSON.parse(fs.readFileSync(ORDERS_FILE, 'utf-8'));
@@ -84,7 +134,7 @@ export async function processCartCheckout(
     orders.unshift({
       id: `ORD-${Date.now()}`,
       userId: user.id,
-      deliveryEmail: email,
+      deliveryEmail: cleanEmail,
       items,
       totalAmount,
       keys: generatedKeys,
@@ -100,6 +150,6 @@ export async function processCartCheckout(
     success: true,
     keys: generatedKeys,
     remainingBalance: newBalance,
-    deliveryEmail: email
+    deliveryEmail: cleanEmail
   };
 }

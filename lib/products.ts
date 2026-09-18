@@ -25,7 +25,7 @@ export async function getProducts(): Promise<Product[]> {
 
     if (error || !data) return [];
 
-    return data.map((p) => ({
+    return data.map((p: any) => ({
       id: p.id,
       title: p.title,
       game: p.game,
@@ -64,7 +64,7 @@ export async function getProductById(id: string): Promise<Product | null> {
 }
 
 export async function saveProducts(products: Product[]): Promise<void> {
-  // Toplu kaydetme ihtiyacı kalmadı, tekil işlemler supabase üzerinden yürütülür.
+  // Artık local JSON dosyası kullanılmıyor, supabaseAdmin tek tek ekliyor.
 }
 
 export async function insertProduct(product: Product): Promise<boolean> {
@@ -85,15 +85,6 @@ export async function insertProduct(product: Product): Promise<boolean> {
   return true;
 }
 
-export async function removeProductById(id: string): Promise<boolean> {
-  const { error } = await supabaseAdmin.from('products').delete().eq('id', id);
-  if (error) {
-    console.error('Supabase ürün silme hatası:', error.message);
-    throw new Error(error.message);
-  }
-  return true;
-}
-
 export async function updateProductInDb(product: Product): Promise<boolean> {
   const { error } = await supabaseAdmin
     .from('products')
@@ -109,6 +100,15 @@ export async function updateProductInDb(product: Product): Promise<boolean> {
 
   if (error) {
     console.error('Supabase ürün güncelleme hatası:', error.message);
+    throw new Error(error.message);
+  }
+  return true;
+}
+
+export async function removeProductById(id: string): Promise<boolean> {
+  const { error } = await supabaseAdmin.from('products').delete().eq('id', id);
+  if (error) {
+    console.error('Supabase ürün silme hatası:', error.message);
     throw new Error(error.message);
   }
   return true;

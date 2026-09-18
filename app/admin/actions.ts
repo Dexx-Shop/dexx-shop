@@ -2,7 +2,7 @@
 
 import fs from 'fs';
 import { getCurrentUser, User, UserRole } from 'lib/auth';
-import { getProducts, Product, saveProducts } from 'lib/products';
+import { insertProduct, removeProductById, updateProductInDb } from 'lib/products';
 import { createCoupon, getCoupons } from 'lib/wallet';
 import { revalidatePath } from 'next/cache';
 import path from 'path';
@@ -101,27 +101,27 @@ export async function addProductAction(formData: FormData) {
     return { success: false, error: 'Başlık, oyun kategorisi ve görsel bağlantısı zorunludur.' };
   }
 
-  const products = await getProducts();
-  const newProduct: Product = {
-    id: `prod_${Date.now()}`,
-    title,
-    game,
-    image,
-    description: description || '',
-    securityTag,
-    pricing: {
-      daily: dailyPrice,
-      weekly: weeklyPrice,
-      monthly: monthlyPrice
-    }
-  };
+  try {
+    await insertProduct({
+      id: `prod_${Date.now()}`,
+      title,
+      game,
+      image,
+      description: description || '',
+      securityTag,
+      pricing: {
+        daily: dailyPrice,
+        weekly: weeklyPrice,
+        monthly: monthlyPrice,
+      },
+    });
 
-  products.unshift(newProduct);
-  await saveProducts(products);
-
-  revalidatePath('/admin');
-  revalidatePath('/');
-  return { success: true };
+    revalidatePath('/admin');
+    revalidatePath('/');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Ürün eklenemedi.' };
+  }
 }
 
 export async function updateProductAction(formData: FormData) {
@@ -145,28 +145,27 @@ export async function updateProductAction(formData: FormData) {
     return { success: false, error: 'Tüm zorunlu alanları doldurun.' };
   }
 
-  const products = await getProducts();
-  const index = products.findIndex((p) => p.id === id);
-  if (index === -1) return { success: false, error: 'Ürün bulunamadı.' };
+  try {
+    await updateProductInDb({
+      id,
+      title,
+      game,
+      image,
+      description: description || '',
+      securityTag,
+      pricing: {
+        daily: dailyPrice,
+        weekly: weeklyPrice,
+        monthly: monthlyPrice,
+      },
+    });
 
-  products[index] = {
-    ...products[index]!,
-    title,
-    game,
-    image,
-    description: description || '',
-    securityTag,
-    pricing: {
-      daily: dailyPrice,
-      weekly: weeklyPrice,
-      monthly: monthlyPrice
-    }
-  };
-
-  await saveProducts(products);
-  revalidatePath('/admin');
-  revalidatePath('/');
-  return { success: true };
+    revalidatePath('/admin');
+    revalidatePath('/');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Ürün güncellenemedi.' };
+  }
 }
 
 export async function deleteProductAction(productId: string) {
@@ -175,13 +174,14 @@ export async function deleteProductAction(productId: string) {
     return { success: false, error: 'Bu işlem için yetkiniz bulunmuyor.' };
   }
 
-  const products = await getProducts();
-  const updated = products.filter((p) => p.id !== productId);
-  await saveProducts(updated);
-
-  revalidatePath('/admin');
-  revalidatePath('/');
-  return { success: true };
+  try {
+    await removeProductById(productId);
+    revalidatePath('/admin');
+    revalidatePath('/');
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Ürün silinemedi.' };
+  }
 }
 
 export const createProductAction = addProductAction;

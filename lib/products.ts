@@ -1,10 +1,9 @@
-import fs from 'fs';
-import path from 'path';
+import { supabaseAdmin } from './supabase';
 
 export interface ProductPricing {
-  daily?: number;
-  weekly?: number;
-  monthly?: number;
+  daily: number;
+  weekly: number;
+  monthly: number;
 }
 
 export interface Product {
@@ -12,77 +11,105 @@ export interface Product {
   title: string;
   game: string;
   image: string;
-  description?: string;
-  securityTag?: string;
+  description: string;
+  securityTag: string;
   pricing: ProductPricing;
 }
 
-const PRODUCTS_FILE = path.join(process.cwd(), 'data', 'products.json');
-
-// Dosya ve klasör yoksa oluştur
-function ensureProductsFile() {
-  const dir = path.dirname(PRODUCTS_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(PRODUCTS_FILE)) {
-    // Başlangıç varsayılan ürünleri
-    const defaultProducts: Product[] = [
-      {
-        id: 'prod_rust_1',
-        title: 'DexX Rust Private Suite',
-        game: 'RUST',
-        image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
-        description: 'Kernel level bypass, Silent Aim, ESP & Recoil Control.',
-        securityTag: 'Undetected',
-        pricing: { daily: 6.99, weekly: 19.99, monthly: 39.99 }
-      },
-      {
-        id: 'prod_fivem_1',
-        title: 'DexX FiveM Enhanced ESP',
-        game: 'FIVEM',
-        image: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
-        description: 'Roleplay uyumlu, stream-proof oyuncu & araç ESP.',
-        securityTag: 'Undetected',
-        pricing: { daily: 4.99, weekly: 14.99, monthly: 29.99 }
-      }
-    ];
-    fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(defaultProducts, null, 2));
-  }
-}
-
-// Ürünleri Listele
 export async function getProducts(): Promise<Product[]> {
-  ensureProductsFile();
   try {
-    const raw = fs.readFileSync(PRODUCTS_FILE, 'utf-8');
-    return JSON.parse(raw);
+    const { data, error } = await supabaseAdmin
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+
+    return data.map((p) => ({
+      id: p.id,
+      title: p.title,
+      game: p.game,
+      image: p.image,
+      description: p.description || '',
+      securityTag: p.security_tag || 'Undetected',
+      pricing: p.pricing || { daily: 0, weekly: 0, monthly: 0 },
+    }));
   } catch {
     return [];
   }
 }
 
-// Tek Ürün Getir
-export async function getProduct(id: string): Promise<Product | undefined> {
-  const products = await getProducts();
-  return products.find((p) => p.id === id);
+export async function getProductById(id: string): Promise<Product | null> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      id: data.id,
+      title: data.title,
+      game: data.game,
+      image: data.image,
+      description: data.description || '',
+      securityTag: data.security_tag || 'Undetected',
+      pricing: data.pricing || { daily: 0, weekly: 0, monthly: 0 },
+    };
+  } catch {
+    return null;
+  }
 }
 
-// Ürünleri Kaydet (Export eksik olan yer burasıydı)
 export async function saveProducts(products: Product[]): Promise<void> {
-  ensureProductsFile();
-  fs.writeFileSync(PRODUCTS_FILE, JSON.stringify(products, null, 2));
+  // Toplu kaydetme ihtiyacı kalmadı, tekil işlemler supabase üzerinden yürütülür.
 }
 
-// En Düşük Fiyatı Hesapla
-export function getLowestPrice(pricing: ProductPricing): number {
-  const prices = [pricing.daily, pricing.weekly, pricing.monthly].filter(
-    (p): p is number => typeof p === 'number' && p > 0
-  );
-  if (prices.length === 0) return 0;
-  return Math.min(...prices);
+export async function insertProduct(product: Product): Promise<boolean> {
+  const { error } = await supabaseAdmin.from('products').insert({
+    id: product.id,
+    title: product.title,
+    game: product.game,
+    image: product.image,
+    description: product.description,
+    security_tag: product.securityTag,
+    pricing: product.pricing,
+  });
+
+  if (error) {
+    console.error('Supabase ürün ekleme hatası:', error.message);
+    throw new Error(error.message);
+  }
+  return true;
 }
 
-export async function getProductById(id: string) {
-  return getProduct(id);
+export async function removeProductById(id: string): Promise<boolean> {
+  const { error } = await supabaseAdmin.from('products').delete().eq('id', id);
+  if (error) {
+    console.error('Supabase ürün silme hatası:', error.message);
+    throw new Error(error.message);
+  }
+  return true;
+}
+
+export async function updateProductInDb(product: Product): Promise<boolean> {
+  const { error } = await supabaseAdmin
+    .from('products')
+    .update({
+      title: product.title,
+      game: product.game,
+      image: product.image,
+      description: product.description,
+      security_tag: product.securityTag,
+      pricing: product.pricing,
+    })
+    .eq('id', product.id);
+
+  if (error) {
+    console.error('Supabase ürün güncelleme hatası:', error.message);
+    throw new Error(error.message);
+  }
+  return true;
 }

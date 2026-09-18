@@ -193,8 +193,8 @@ export const removeProductAction = deleteProductAction;
 
 export async function createCouponAction(formData: FormData) {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'owner') {
-    return { success: false, error: 'Sadece Mağaza Sahibi (Owner) bakiye kuponu üretebilir.' };
+  if (!user || (user.role !== 'owner' && user.role !== 'admin')) {
+    return { success: false, error: 'Kupon üretmek için yetkiniz bulunmuyor.' };
   }
 
   const amountStr = formData.get('amount') as string;
@@ -204,9 +204,14 @@ export async function createCouponAction(formData: FormData) {
     return { success: false, error: 'Lütfen geçerli bir dolar miktarı girin.' };
   }
 
-  const newCoupon = await createCoupon(amount);
-  revalidatePath('/admin');
-  return { success: true, coupon: newCoupon };
+  try {
+    const newCoupon = await createCoupon(amount);
+    revalidatePath('/admin');
+    return { success: true, coupon: newCoupon };
+  } catch (err: any) {
+    console.error('Kupon üretim hatası:', err);
+    return { success: false, error: err?.message || 'Kupon veritabanına eklenemedi.' };
+  }
 }
 
 export async function getCouponsAction() {

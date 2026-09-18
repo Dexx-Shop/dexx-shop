@@ -108,11 +108,11 @@ export async function createCoupon(amount: number): Promise<Coupon> {
     code: newCoupon.code,
     amount: newCoupon.amount,
     is_used: false,
-    created_at: newCoupon.createdAt,
   });
 
   if (error) {
-    throw new Error(`Kupon oluşturulamadı: ${error.message}`);
+    console.error('Supabase balance_codes insert error:', error);
+    throw new Error(`Veritabanı hatası: ${error.message}`);
   }
 
   return newCoupon;

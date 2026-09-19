@@ -13,12 +13,15 @@ export default function CartDrawer() {
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [deliveryEmail, setDeliveryEmail] = useState('');
+  const [orderCode, setOrderCode] = useState<string | null>(null);
   const [remainingBalance, setRemainingBalance] = useState<number | undefined>(undefined);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
       setIsSuccess(false);
       setError(null);
+      setCopied(false);
     }
   }, [isOpen]);
 
@@ -30,7 +33,6 @@ export default function CartDrawer() {
     setLoading(true);
 
     try {
-      // Seçilen paketi (Günlük/Haftalık/Aylık) tam olarak iletiyoruz
       const res = await processCartCheckoutAction(
         email,
         items.map((it) => ({
@@ -46,6 +48,7 @@ export default function CartDrawer() {
         setIsSuccess(true);
         setDeliveryEmail(res.deliveryEmail || email);
         setRemainingBalance(res.remainingBalance);
+        setOrderCode(res.orderCode || null);
         clearCart();
       } else {
         setError(res.error || 'Ödeme tamamlanamadı.');
@@ -61,6 +64,13 @@ export default function CartDrawer() {
     setIsSuccess(false);
     closeCart();
   }
+
+  const handleCopyCode = () => {
+    if (!orderCode) return;
+    navigator.clipboard.writeText(orderCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -88,41 +98,62 @@ export default function CartDrawer() {
 
           {/* Başarılı Sipariş Ekranı */}
           {isSuccess ? (
-            <div className="space-y-6 py-6 animate-fadeIn text-center">
-              <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center mx-auto text-3xl">
-                ✉️
+            <div className="space-y-6 py-4 animate-fadeIn text-center">
+              <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-center mx-auto text-3xl">
+                ⚡
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-xl font-black text-white tracking-tight">Tebrikler, Sipariş Tamamlandı!</h3>
+                <h3 className="text-xl font-black text-white tracking-tight">Siparişiniz Alındı!</h3>
                 <p className="text-xs text-neutral-300 leading-relaxed max-w-xs mx-auto">
-                  Lisans anahtarınız başarıyla üretildi ve <strong className="text-emerald-400 font-mono">{deliveryEmail}</strong> adresinize iletildi.
-                </p>
-                <p className="text-[11px] text-neutral-500">
-                  Lütfen gelen kutunuzu (ve spam/gereksiz klasörünü) kontrol ediniz.
+                  Sipariş detaylarınız <strong className="text-red-400 font-mono">{deliveryEmail}</strong> adresinize iletildi.
                 </p>
               </div>
 
+              {/* Sipariş Kodu Kartı */}
+              {orderCode && (
+                <div className="p-4 rounded-2xl bg-neutral-950 border border-red-900/40 space-y-2 text-left">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">
+                      Sipariş Kodunuz
+                    </span>
+                    <button
+                      onClick={handleCopyCode}
+                      className="text-[11px] text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+                    >
+                      {copied ? 'Kopyalandı ✓' : 'Kodu Kopyala'}
+                    </button>
+                  </div>
+                  <div className="font-mono text-lg font-black text-white tracking-wider bg-black/60 p-2.5 rounded-xl border border-white/[0.05] text-center select-all">
+                    {orderCode}
+                  </div>
+                  <p className="text-[11px] text-neutral-400 leading-relaxed pt-1">
+                    Lisansınızı ve loader dosyanızı anında teslim almak için Discord sunucumuzdan ticket açarak bu kodu iletiniz.
+                  </p>
+                </div>
+              )}
+
               {remainingBalance !== undefined && (
-                <div className="p-3 rounded-xl bg-neutral-950 border border-neutral-800 text-xs font-mono text-neutral-400 inline-block">
+                <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs font-mono text-neutral-400 inline-block">
                   Kalan Bakiyeniz: <span className="text-white font-bold">${remainingBalance.toFixed(2)} USD</span>
                 </div>
               )}
 
-              <div className="space-y-2 pt-4">
-                <Link
-                  href="/profile"
-                  onClick={handleFinishAndClose}
-                  className="w-full block text-center py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider transition shadow-lg shadow-red-950"
+              <div className="space-y-2 pt-2">
+                <a
+                  href="https://discord.gg/P4hymgPn3R"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full block text-center py-3.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-wider transition shadow-lg shadow-red-950"
                 >
-                  Lisansımı Aktif Etmeye Git →
-                </Link>
+                  Discord'a Git ve Lisansı Al →
+                </a>
                 <button
                   type="button"
                   onClick={handleFinishAndClose}
                   className="w-full py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-neutral-400 text-xs font-semibold transition cursor-pointer"
                 >
-                  Alışverişe Devam Et
+                  Kapat
                 </button>
               </div>
             </div>

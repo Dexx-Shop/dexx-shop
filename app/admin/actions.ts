@@ -93,6 +93,7 @@ export async function addProductAction(formData: FormData) {
   const image = (formData.get('image') as string)?.trim();
   const description = (formData.get('description') as string)?.trim();
   const securityTag = (formData.get('securityTag') as string)?.trim() || 'Undetected';
+  const status = (formData.get('status') as any) || 'active'; // <-- EKLENDİ
 
   const dailyPrice = parseFloat(formData.get('price_daily') as string) || 0;
   const weeklyPrice = parseFloat(formData.get('price_weekly') as string) || 0;
@@ -110,6 +111,7 @@ export async function addProductAction(formData: FormData) {
       image,
       description: description || '',
       securityTag,
+      status, // <-- EKLENDİ
       pricing: {
         daily: dailyPrice,
         weekly: weeklyPrice,
@@ -118,6 +120,7 @@ export async function addProductAction(formData: FormData) {
     });
 
     revalidatePath('/admin');
+    revalidatePath('/status');
     revalidatePath('/');
     return { success: true };
   } catch (err: any) {

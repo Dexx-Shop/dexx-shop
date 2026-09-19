@@ -98,18 +98,18 @@ export default async function AdminPage() {
           <AdminManager admins={admins} isOwner={isOwner} currentUserId={user.id} />
         </section>
 
-        {/* 5. BÖLÜM: SUPABASE'E YAZAN ASIL YENİ ÜRÜN FORMU */}
+        {/* 5. BÖLÜM: YENİ ÜRÜN / MOD EKLEME FORMU */}
         <section className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 sm:p-8 backdrop-blur-md">
           <h2 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
             <span>📦</span>
             <span>Yeni Ürün / Mod Ekle</span>
           </h2>
           <p className="text-xs text-neutral-400 mb-6">
-            Vitrine eklenecek yeni oyun modunu ve fiyatlandırma paketlerini belirleyin.
+            Vitrine eklenecek yeni oyun modunu, durumunu ve fiyatlandırma paketlerini belirleyin.
           </p>
 
           <form action={addProductAction} className="space-y-4 max-w-2xl">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
                   Ürün Başlığı
@@ -137,19 +137,50 @@ export default async function AdminPage() {
                   <option value="FIVEM">FIVEM</option>
                 </select>
               </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
+                  Ürün Durumu
+                </label>
+                <select
+                  name="status"
+                  required
+                  defaultValue="active"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-red-600 transition cursor-pointer"
+                >
+                  <option value="active">🟢 Aktif / Güvenli</option>
+                  <option value="updating">🟡 Güncelleniyor</option>
+                  <option value="inactive">🔴 Bakımda / Güvenli Değil</option>
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
-                Görsel Bağlantısı (URL)
-              </label>
-              <input
-                name="image"
-                type="url"
-                required
-                placeholder="https://... veya /gorsel.png"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
+                  Görsel Bağlantısı (URL)
+                </label>
+                <input
+                  name="image"
+                  type="url"
+                  required
+                  placeholder="https://... veya /gorsel.png"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
+                  Güvenlik Etiketi
+                </label>
+                <input
+                  name="securityTag"
+                  type="text"
+                  defaultValue="Undetected"
+                  placeholder="Undetected, Use at Own Risk..."
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition"
+                />
+              </div>
             </div>
 
             <div>

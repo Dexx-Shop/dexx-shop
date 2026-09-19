@@ -3,6 +3,7 @@
 import fs from 'fs';
 import { getCurrentUser, User, UserRole } from 'lib/auth';
 import { insertProduct, removeProductById, updateProductInDb } from 'lib/products';
+import { supabaseAdmin } from 'lib/supabase';
 import { createCoupon, getCoupons } from 'lib/wallet';
 import { revalidatePath } from 'next/cache';
 import path from 'path';
@@ -222,20 +223,62 @@ export async function getCouponsAction() {
   return await getCoupons();
 }
 
-// Sipariş ve Key Loglarını Getir (Sadece Owner ve Admin)
+// -------------------------------------------------------------
+// 4. SİPARİŞ & LOG YÖNETİMİ (SUPABASE)
+// -------------------------------------------------------------
+
 export async function getOrderLogsAction() {
   const user = await getCurrentUser();
   if (!user || (user.role !== 'owner' && user.role !== 'admin')) {
     return [];
   }
 
-  const ordersFile = path.join(process.cwd(), 'data', 'orders.json');
   try {
-    if (!fs.existsSync(ordersFile)) return [];
-    const raw = fs.readFileSync(ordersFile, 'utf-8');
-    const orders = JSON.parse(raw);
-    return orders;
-  } catch {
+    const { data, error } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Supabase sipariş çekme hatası:', error.message);
+      return [];
+    }
+
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      userId: row.user_id,
+      username: row.username,
+      deliveryEmail: row.delivery_email,
+      items: typeof row.items === 'string' ? JSON.parse(row.items) : row.items,
+      totalAmount: Number(row.total_amount),
+      status: row.status,
+      createdAt: row.created_at
+    }));
+  } catch (err) {
+    console.error('Sipariş logları getirilemedi:', err);
     return [];
+  }
+}
+
+export async function toggleOrderStatusAction(orderId: string, currentStatus: string) {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== 'owner' && user.role !== 'admin')) {
+    return { success: false, error: 'Yetkiniz bulunmuyor.' };
+  }
+
+  const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+
+  try {
+    const { error } = await supabaseAdmin
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', orderId);
+
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath('/admin');
+    return { success: true, newStatus };
+  } catch (err: any) {
+    return { success: false, error: err.message };
   }
 }

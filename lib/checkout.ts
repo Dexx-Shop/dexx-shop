@@ -1,12 +1,8 @@
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
 import { getCurrentUser } from './auth';
 import { sendLicenseEmail } from './mail';
 import { supabaseAdmin } from './supabase';
 import { getUserBalance, updateUserBalance } from './wallet';
-
-const ORDERS_FILE = path.join(process.cwd(), 'data', 'orders.json');
 
 export interface PurchasedKey {
   productTitle: string;
@@ -23,7 +19,7 @@ export interface CheckoutResult {
   orderCode?: string;
 }
 
-// 6 haneli şık sipariş kodu üretici (Örn: DEXX-7B92A4)
+// 6 haneli benzersiz sipariş kodu üretici (Örn: DEXX-7B92A4)
 export function generateOrderCode(): string {
   const code = crypto.randomBytes(3).toString('hex').toUpperCase();
   return `DEXX-${code}`;
@@ -57,7 +53,7 @@ export async function processCartCheckout(
     };
   }
 
-  // 1. Bakiyeyi güvenle düş
+  // 1. Bakiyeyi düş
   const newBalance = await updateUserBalance(user.id, -totalAmount);
 
   // 2. Sipariş Kodu Üret
@@ -72,7 +68,7 @@ export async function processCartCheckout(
       orderCode: masterOrderCode
     });
 
-    // Müşteriye Discord Ticket yönlendirmeli mail gönder
+    // Müşteriye Discord Ticket yönlendirmeli maili gönder
     try {
       await sendLicenseEmail(cleanEmail, item.title, tierName, masterOrderCode);
     } catch (mailErr) {
@@ -80,50 +76,24 @@ export async function processCartCheckout(
     }
   }
 
-  // 3. Siparişi Admin Logları için data/orders.json dosyasına yaz
+  // 3. Siparişi Doğrudan Supabase'e Kaydet (Vercel için kalıcı çözüm)
   try {
-    const dir = path.dirname(ORDERS_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-    let orders: any[] = [];
-    if (fs.existsSync(ORDERS_FILE)) {
-      try {
-        orders = JSON.parse(fs.readFileSync(ORDERS_FILE, 'utf-8'));
-      } catch {
-        orders = [];
-      }
-    }
-
-    const newOrderRecord = {
-      id: masterOrderCode,
-      userId: user.id,
-      username: user.username || 'Kullanıcı',
-      deliveryEmail: cleanEmail,
-      items,
-      totalAmount,
-      status: 'pending', // 'pending' = Discord ticket bekleniyor, 'completed' = key teslim edildi
-      createdAt: new Date().toISOString()
-    };
-
-    orders.unshift(newOrderRecord);
-    fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
-  } catch (err) {
-    console.error('Order log kayıt hatası:', err);
-  }
-
-  // 4. Supabase log tablosuna da ekle (opsiyonel hata yakalama ile)
-  try {
-    await supabaseAdmin.from('orders').insert({
+    const { error: orderError } = await supabaseAdmin.from('orders').insert({
       id: masterOrderCode,
       user_id: String(user.id),
-      email: cleanEmail,
+      username: user.username || 'Kullanıcı',
+      delivery_email: cleanEmail,
+      items: items,
       total_amount: totalAmount,
-      items: JSON.stringify(items),
-      status: 'pending'
+      status: 'pending',
+      created_at: new Date().toISOString()
     });
+
+    if (orderError) {
+      console.error('Supabase sipariş kayıt hatası:', orderError.message);
+    }
   } catch (dbErr) {
-    // Supabase tablosu yoksa bile orders.json sayesinde akış aksamaz
-    console.log('Supabase orders fallback:', dbErr);
+    console.error('Supabase sipariş insert beklenmeyen hata:', dbErr);
   }
 
   return {

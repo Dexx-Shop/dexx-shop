@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toggleOrderStatusAction } from './actions';
 
 interface OrderItem {
   id: string;
@@ -24,6 +25,7 @@ interface OrderRecord {
 export default function OrderLogsManager({ initialOrders = [] }: { initialOrders: OrderRecord[] }) {
   const [orders, setOrders] = useState<OrderRecord[]>(initialOrders);
   const [search, setSearch] = useState('');
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const filteredOrders = orders.filter((o) => {
     const s = search.toLowerCase();
@@ -34,14 +36,24 @@ export default function OrderLogsManager({ initialOrders = [] }: { initialOrders
     );
   });
 
-  const toggleStatus = (orderId: string) => {
-    setOrders((prev) =>
-      prev.map((ord) =>
-        ord.id === orderId
-          ? { ...ord, status: ord.status === 'completed' ? 'pending' : 'completed' }
-          : ord
-      )
-    );
+  const handleToggleStatus = async (orderId: string, currentStatus: string) => {
+    setLoadingId(orderId);
+    try {
+      const res = await toggleOrderStatusAction(orderId, currentStatus);
+      if (res.success && res.newStatus) {
+        setOrders((prev) =>
+          prev.map((ord) =>
+            ord.id === orderId ? { ...ord, status: res.newStatus as 'pending' | 'completed' } : ord
+          )
+        );
+      } else {
+        alert(res.error || 'Durum güncellenemedi.');
+      }
+    } catch {
+      alert('İşlem sırasında bir hata oluştu.');
+    } finally {
+      setLoadingId(null);
+    }
   };
 
   return (
@@ -126,14 +138,19 @@ export default function OrderLogsManager({ initialOrders = [] }: { initialOrders
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     <button
-                      onClick={() => toggleStatus(ord.id)}
-                      className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition cursor-pointer ${
+                      onClick={() => handleToggleStatus(ord.id, ord.status)}
+                      disabled={loadingId === ord.id}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition cursor-pointer disabled:opacity-50 ${
                         ord.status === 'completed'
                           ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
-                          : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/50'
                       }`}
                     >
-                      {ord.status === 'completed' ? 'Geri Al' : '✓ Teslim Edildi Yap'}
+                      {loadingId === ord.id
+                        ? 'İşleniyor...'
+                        : ord.status === 'completed'
+                        ? 'Geri Al'
+                        : '✓ Teslim Edildi Yap'}
                     </button>
                   </td>
                 </tr>

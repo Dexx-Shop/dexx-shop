@@ -11,7 +11,7 @@ const ORDERS_FILE = path.join(process.cwd(), 'data', 'orders.json');
 export interface PurchasedKey {
   productTitle: string;
   tier: string;
-  key: string;
+  orderCode: string;
 }
 
 export interface CheckoutResult {
@@ -20,15 +20,13 @@ export interface CheckoutResult {
   keys?: PurchasedKey[];
   remainingBalance?: number;
   deliveryEmail?: string;
+  orderCode?: string;
 }
 
-// Güvenli rastgele lisans anahtarı üretici
-export function generateLicenseKey(prefix = 'DEXX'): string {
-  const p1 = crypto.randomBytes(2).toString('hex').toUpperCase();
-  const p2 = crypto.randomBytes(2).toString('hex').toUpperCase();
-  const p3 = crypto.randomBytes(2).toString('hex').toUpperCase();
-  const p4 = crypto.randomBytes(2).toString('hex').toUpperCase();
-  return `${prefix}-${p1}-${p2}-${p3}-${p4}`;
+// 6 haneli şık sipariş kodu üretici (Örn: DEXX-7B92A4)
+export function generateOrderCode(): string {
+  const code = crypto.randomBytes(3).toString('hex').toUpperCase();
+  return `DEXX-${code}`;
 }
 
 export async function processCartCheckout(
@@ -59,97 +57,80 @@ export async function processCartCheckout(
     };
   }
 
-  // 1. Bakiyeyi düş
+  // 1. Bakiyeyi güvenle düş
   const newBalance = await updateUserBalance(user.id, -totalAmount);
 
-  // 2. Her bir ürün için lisans anahtarı üret ve Supabase'e ekle
-  const generatedKeys: PurchasedKey[] = [];
-  const licenseInserts = [];
+  // 2. Sipariş Kodu Üret
+  const masterOrderCode = generateOrderCode();
+  const purchasedItems: PurchasedKey[] = [];
 
   for (const item of items) {
-    for (let i = 0; i < item.quantity; i++) {
-      const createdKey = generateLicenseKey('DEXX');
-      const tierName = item.tier || 'Standart Lisans';
+    const tierName = item.tier || 'Standart Lisans';
+    purchasedItems.push({
+      productTitle: item.title,
+      tier: tierName,
+      orderCode: masterOrderCode
+    });
 
-      generatedKeys.push({
-        productTitle: item.title,
-        tier: tierName,
-        key: createdKey
-      });
-
-      // Lisans süresini belirleme
-      let days = 30;
-      const lowerTier = tierName.toLowerCase();
-      if (lowerTier.includes('gün')) days = 1;
-      else if (lowerTier.includes('hafta')) days = 7;
-      else if (lowerTier.includes('ay')) days = 30;
-
-      const now = new Date();
-      const expiresAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-
-      // Supabase'e toplu yazmak için listeye alıyoruz
-      licenseInserts.push({
-        user_id: String(user.id).trim(),
-        product_id: item.title,
-        license_key: createdKey,
-        duration: tierName,
-        status: 'active',
-        expires_at: expiresAt.toISOString()
-      });
-
-      // E-posta gönderimi
-      try {
-        await sendLicenseEmail(cleanEmail, item.title, tierName, createdKey);
-      } catch (mailErr) {
-        console.error(`Mail gönderilemedi (${cleanEmail}):`, mailErr);
-      }
-    }
-  }
-
-  // 3. Lisansları doğrudan Supabase 'licenses' tablosuna kaydet
-  if (licenseInserts.length > 0) {
+    // Müşteriye Discord Ticket yönlendirmeli mail gönder
     try {
-      const { error: insertError } = await supabaseAdmin
-        .from('licenses')
-        .insert(licenseInserts);
-
-      if (insertError) {
-        console.error('Supabase licenses insert hatası:', insertError.message);
-      }
-    } catch (dbErr) {
-      console.error('Supabase licenses insert beklenmeyen hata:', dbErr);
+      await sendLicenseEmail(cleanEmail, item.title, tierName, masterOrderCode);
+    } catch (mailErr) {
+      console.error(`Mail gönderilemedi (${cleanEmail}):`, mailErr);
     }
   }
 
-  // 4. Sipariş yedeğini orders dosyasına kaydet
+  // 3. Siparişi Admin Logları için data/orders.json dosyasına yaz
   try {
     const dir = path.dirname(ORDERS_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
     let orders: any[] = [];
     if (fs.existsSync(ORDERS_FILE)) {
-      orders = JSON.parse(fs.readFileSync(ORDERS_FILE, 'utf-8'));
+      try {
+        orders = JSON.parse(fs.readFileSync(ORDERS_FILE, 'utf-8'));
+      } catch {
+        orders = [];
+      }
     }
 
-    orders.unshift({
-      id: `ORD-${Date.now()}`,
+    const newOrderRecord = {
+      id: masterOrderCode,
       userId: user.id,
+      username: user.username || 'Kullanıcı',
       deliveryEmail: cleanEmail,
       items,
       totalAmount,
-      keys: generatedKeys,
+      status: 'pending', // 'pending' = Discord ticket bekleniyor, 'completed' = key teslim edildi
       createdAt: new Date().toISOString()
-    });
+    };
 
+    orders.unshift(newOrderRecord);
     fs.writeFileSync(ORDERS_FILE, JSON.stringify(orders, null, 2));
   } catch (err) {
-    console.error('Order save error:', err);
+    console.error('Order log kayıt hatası:', err);
+  }
+
+  // 4. Supabase log tablosuna da ekle (opsiyonel hata yakalama ile)
+  try {
+    await supabaseAdmin.from('orders').insert({
+      id: masterOrderCode,
+      user_id: String(user.id),
+      email: cleanEmail,
+      total_amount: totalAmount,
+      items: JSON.stringify(items),
+      status: 'pending'
+    });
+  } catch (dbErr) {
+    // Supabase tablosu yoksa bile orders.json sayesinde akış aksamaz
+    console.log('Supabase orders fallback:', dbErr);
   }
 
   return {
     success: true,
-    keys: generatedKeys,
+    keys: purchasedItems,
     remainingBalance: newBalance,
-    deliveryEmail: cleanEmail
+    deliveryEmail: cleanEmail,
+    orderCode: masterOrderCode
   };
 }

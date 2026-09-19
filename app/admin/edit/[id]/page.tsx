@@ -51,13 +51,16 @@ export default async function EditProductPage(props: {
             </div>
 
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-semibold">Oyun</label>
-              <input
+              <label className="block text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-semibold">Oyun Kategorisi</label>
+              <select
                 name="game"
-                defaultValue={product.game}
+                defaultValue={product.game?.toUpperCase() || 'RUST'}
                 required
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm uppercase focus:outline-none focus:border-red-600"
-              />
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm uppercase text-white focus:outline-none focus:border-red-600 cursor-pointer"
+              >
+                <option value="RUST">RUST</option>
+                <option value="FIVEM">FIVEM</option>
+              </select>
             </div>
 
             <div>

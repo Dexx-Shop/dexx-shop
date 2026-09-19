@@ -67,19 +67,19 @@ export default async function AdminPage() {
           </Link>
         </div>
 
-        {/* 1. BÖLÜM: HERO CANLI DUYURU & SAYAÇ AYARLARI (Owner & Admin) */}
+        {/* 1. BÖLÜM: HERO CANLI DUYURU & SAYAÇ AYARLARI */}
         <section>
           <AdminHeroSettings />
         </section>
 
-        {/* 2. BÖLÜM: AÇILIR / KAPANIR SİPARİŞ & KEY LOGLARI (Sadece Owner) */}
+        {/* 2. BÖLÜM: SİPARİŞ & KEY LOGLARI */}
         {isOwner && (
           <section>
             <OrderLogsManager initialOrders={orderLogs} />
           </section>
         )}
 
-        {/* 3. BÖLÜM: KUPON ÜRETİCİ (Sadece Owner) */}
+        {/* 3. BÖLÜM: KUPON ÜRETİCİ */}
         {isOwner && (
           <section>
             <CouponManager initialCoupons={coupons} />
@@ -98,7 +98,7 @@ export default async function AdminPage() {
           <AdminManager admins={admins} isOwner={isOwner} currentUserId={user.id} />
         </section>
 
-        {/* 5. BÖLÜM: YENİ ÜRÜN EKLEME FORMU */}
+        {/* 5. BÖLÜM: SUPABASE'E YAZAN ASIL YENİ ÜRÜN FORMU */}
         <section className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 sm:p-8 backdrop-blur-md">
           <h2 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
             <span>📦</span>
@@ -125,15 +125,17 @@ export default async function AdminPage() {
 
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
-                  Oyun Adı (Etiket)
+                  Oyun Kategorisi
                 </label>
-                <input
+                <select
                   name="game"
-                  type="text"
                   required
-                  placeholder="RUST, FIVEM, CS2..."
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition uppercase"
-                />
+                  defaultValue="RUST"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white font-bold uppercase focus:outline-none focus:border-red-600 transition cursor-pointer"
+                >
+                  <option value="RUST">RUST</option>
+                  <option value="FIVEM">FIVEM</option>
+                </select>
               </div>
             </div>
 
@@ -145,7 +147,7 @@ export default async function AdminPage() {
                 name="image"
                 type="url"
                 required
-                placeholder="https://images.unsplash.com/..."
+                placeholder="https://... veya /gorsel.png"
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition"
               />
             </div>
@@ -157,7 +159,7 @@ export default async function AdminPage() {
               <textarea
                 name="description"
                 rows={3}
-                placeholder="Aimbot, ESP, Spoofer dahil..."
+                placeholder="Aimbot, ESP, Misc özellikleri..."
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition resize-none"
               />
             </div>

@@ -31,6 +31,7 @@ export default function ProductListManager({ initialProducts }: { initialProduct
 
   return (
     <div>
+      {/* Mevcut Ürün Kartları */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {products.map((p) => (
           <div
@@ -48,11 +49,11 @@ export default function ProductListManager({ initialProducts }: { initialProduct
               <p className="text-[11px] text-neutral-400 line-clamp-2 mt-1">{p.description || 'Açıklama yok'}</p>
               
               <div className="flex items-center gap-2 mt-2 text-[10px] text-neutral-400 font-mono">
-                <span>G: ${p.pricing.daily || 0}</span>
+                <span>G: ${p.pricing?.daily || 0}</span>
                 <span>•</span>
-                <span>H: ${p.pricing.weekly || 0}</span>
+                <span>H: ${p.pricing?.weekly || 0}</span>
                 <span>•</span>
-                <span>A: ${p.pricing.monthly || 0}</span>
+                <span>A: ${p.pricing?.monthly || 0}</span>
               </div>
             </div>
 
@@ -104,13 +105,16 @@ export default function ProductListManager({ initialProducts }: { initialProduct
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-neutral-400 mb-1">Oyun</label>
-                  <input
+                  <label className="block text-[11px] font-bold uppercase text-neutral-400 mb-1">Oyun Kategorisi</label>
+                  <select
                     name="game"
-                    defaultValue={editingProduct.game}
+                    defaultValue={editingProduct.game?.toUpperCase() || 'RUST'}
                     required
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs text-white uppercase focus:outline-none focus:border-red-600"
-                  />
+                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs text-white font-bold uppercase focus:outline-none focus:border-red-600 cursor-pointer"
+                  >
+                    <option value="RUST">RUST</option>
+                    <option value="FIVEM">FIVEM</option>
+                  </select>
                 </div>
               </div>
 
@@ -141,7 +145,7 @@ export default function ProductListManager({ initialProducts }: { initialProduct
                     name="price_daily"
                     type="number"
                     step="0.01"
-                    defaultValue={editingProduct.pricing.daily}
+                    defaultValue={editingProduct.pricing?.daily}
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2 text-xs text-white font-mono"
                   />
                 </div>
@@ -151,7 +155,7 @@ export default function ProductListManager({ initialProducts }: { initialProduct
                     name="price_weekly"
                     type="number"
                     step="0.01"
-                    defaultValue={editingProduct.pricing.weekly}
+                    defaultValue={editingProduct.pricing?.weekly}
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2 text-xs text-white font-mono"
                   />
                 </div>
@@ -161,7 +165,7 @@ export default function ProductListManager({ initialProducts }: { initialProduct
                     name="price_monthly"
                     type="number"
                     step="0.01"
-                    defaultValue={editingProduct.pricing.monthly}
+                    defaultValue={editingProduct.pricing?.monthly}
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2 text-xs text-white font-mono"
                   />
                 </div>

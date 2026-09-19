@@ -22,8 +22,9 @@ export default function StatusView({ initialProducts }: { initialProducts: Produ
   }, {} as Record<string, Product[]>);
 
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white pb-24 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto text-center pt-4 sm:pt-8 pb-10">
+    // pt-28 sm:pt-36 eklenerek sabit navbarın arkasında kalması engellendi
+    <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white pb-24 px-4 sm:px-6 lg:px-8 pt-28 sm:pt-36">
+      <div className="max-w-4xl mx-auto text-center pb-10">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-300 mb-6 shadow-inner">
           <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
           <span className="font-semibold uppercase tracking-wider text-[11px]">ÜRÜN DURUMU</span>
@@ -83,8 +84,13 @@ export default function StatusView({ initialProducts }: { initialProducts: Produ
 
               <div className="divide-y divide-neutral-800/60">
                 {items.map((item) => {
-                  const isSafe = item.status === 'active';
-                  const isUpdating = item.status === 'updating';
+                  const statusVal = (item.status || '').toLowerCase();
+                  const securityTagVal = (item.securityTag || '').toLowerCase();
+
+                  // Durum kontrolü: 'active' ise veya status belirtilmemişken tag 'undetected' ise güvenli kabul et
+                  const isUpdating = statusVal === 'updating';
+                  const isInactive = statusVal === 'inactive';
+                  const isSafe = !isUpdating && !isInactive && (statusVal === 'active' || securityTagVal.includes('undetected') || !statusVal);
 
                   return (
                     <div
@@ -120,10 +126,10 @@ export default function StatusView({ initialProducts }: { initialProducts: Produ
                             GÜNCELLENİYOR
                           </span>
                         )}
-                        {!isSafe && !isUpdating && (
+                        {isInactive && (
                           <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-red-950/70 border border-red-800/80 text-red-400 flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                            GÜVENLİ DEĞİL
+                            GÜVENLİ DEĞİL / BAKIMDA
                           </span>
                         )}
 

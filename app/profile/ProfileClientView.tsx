@@ -22,7 +22,7 @@ interface ProfileClientProps {
 }
 
 export default function ProfileClientView({ user, licenses: initialLicenses }: ProfileClientProps) {
-  const [activeTab, setActiveTab] = useState<'licenses' | 'wallet' | 'seller' | 'settings'>('licenses');
+  const [activeTab, setActiveTab] = useState<'licenses' | 'wallet' | 'seller' | 'settings'>('wallet');
   const [currentBalance, setCurrentBalance] = useState(user.balance);
   const [licenseList, setLicenseList] = useState<any[]>(initialLicenses || []);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -47,8 +47,9 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
   const [pwMsg, setPwMsg] = useState<{ text: string; error: boolean } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Discord Davet Bağlantısı
+  // Yönlendirme Bağlantıları
   const DISCORD_URL = 'https://discord.gg/P4hymgPn3R';
+  const ITEMSATIS_URL = 'https://www.itemsatis.com'; // Buraya kendi İtemSatış mağaza linkini yapıştırabilirsin
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -130,14 +131,14 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-[#ededed] flex font-sans antialiased selection:bg-white selection:text-black">
+    <div className="min-h-screen bg-[#050505] text-[#ededed] flex font-[family-name:var(--font-jakarta)] antialiased selection:bg-red-600 selection:text-white">
       
       {/* SOL MENÜ */}
       <aside className="w-64 border-r border-white/[0.05] bg-[#070709] flex flex-col justify-between p-4 shrink-0 select-none">
         <div className="space-y-6">
           <div className="flex items-center gap-3 px-2 py-3 border-b border-white/[0.05]">
-            <div className="w-10 h-10 rounded-full bg-[#132e20] border border-[#235338] flex items-center justify-center font-bold text-[#4ade80] text-sm tracking-tight">
-              {user.username.charAt(0).toLowerCase()}
+            <div className="w-10 h-10 rounded-full bg-[#1c0d0d] border border-red-800/40 flex items-center justify-center font-bold text-red-500 text-sm tracking-tight">
+              {user.username.charAt(0).toUpperCase()}
             </div>
             <div className="overflow-hidden">
               <h2 className="text-sm font-bold text-white truncate tracking-tight">{user.username}</h2>
@@ -205,7 +206,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
           </nav>
         </div>
 
-        {/* ALT LİNKLER: GERÇEK ÇIKIŞ YAP FORMU */}
+        {/* ALT LİNKLER */}
         <div className="pt-4 border-t border-white/[0.05] space-y-1">
           <Link
             href="/"
@@ -243,7 +244,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                 <p className="text-sm text-neutral-400 mt-1">Satın aldığınız lisans anahtarları burada listelenecek.</p>
               </div>
 
-              {/* LİSANS ANAHTARI TANIMLAMA */}
+              {/* Lisans Tanımlama */}
               <div className="bg-[#0b0b0e] border border-white/[0.07] rounded-2xl p-6 shadow-xl space-y-4">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-sm">
@@ -252,7 +253,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                   <div>
                     <h3 className="text-sm font-semibold text-white tracking-tight">Lisans Anahtarı Tanımla</h3>
                     <p className="text-xs text-neutral-400 mt-0.5">
-                      Satın alım sonrası mail adresinize gelen veya yetkiliden aldığınız ürün lisans kodunu buraya girerek üyeliğinizi hemen başlatın.
+                      Satın alım sonrası aldığınız lisans kodunu girerek üyeliğinizi başlatın.
                     </p>
                   </div>
                 </div>
@@ -288,7 +289,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                 </form>
               </div>
 
-              {/* LİSANS LİSTESİ */}
+              {/* Lisans Listesi */}
               <div className="space-y-4 pt-2">
                 <div className="flex items-center justify-between px-1">
                   <h3 className="text-sm font-semibold text-white tracking-tight flex items-center gap-2">
@@ -308,8 +309,6 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                   licenseList.map((lic: any, idx: number) => (
                     <div key={lic.id || lic.key || idx} className="bg-[#0b0b0e] border border-white/[0.05] rounded-2xl p-5 space-y-4">
                       <div className="flex items-center justify-between">
-                        
-                        {/* Ürün Görseli ve Detay */}
                         <div className="flex items-center gap-3.5">
                           <div className="w-12 h-12 rounded-xl bg-neutral-900 border border-white/[0.08] overflow-hidden shrink-0 flex items-center justify-center">
                             {lic.image ? (
@@ -317,9 +316,6 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                                 src={lic.image}
                                 alt={lic.productTitle}
                                 className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  (e.target as any).style.display = 'none';
-                                }}
                               />
                             ) : (
                               <span className="text-[10px] font-mono text-neutral-500 font-bold">
@@ -343,15 +339,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                           </div>
                         </div>
 
-                        {/* Butonlar */}
                         <div className="flex items-center gap-2">
-                          <button className="px-3.5 py-1.5 rounded-xl border border-white/[0.08] text-xs text-neutral-300 hover:text-white transition">
-                            ★ Puanla
-                          </button>
-                          <button className="px-3.5 py-1.5 rounded-xl border border-white/[0.08] text-xs text-neutral-300 hover:text-white transition">
-                            Kurulum
-                          </button>
-
                           <button
                             onClick={() =>
                               setDeleteTarget({
@@ -360,19 +348,14 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                                 title: lic.productTitle || 'DexX Lisansı'
                               })
                             }
-                            className="px-3 py-1.5 rounded-xl border border-rose-900/40 bg-rose-950/20 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-900/40 hover:border-rose-700/60 transition cursor-pointer flex items-center gap-1"
-                            title="Ürünü Sil"
+                            className="px-3 py-1.5 rounded-xl border border-rose-900/40 bg-rose-950/20 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-900/40 transition cursor-pointer flex items-center gap-1"
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            <span>Sil</span>
+                            Sil
                           </button>
                         </div>
                       </div>
 
-                      {/* Lisans Anahtarı */}
-                      <div className="flex items-center justify-between p-3.5 rounded-xl bg-black/60 border border-white/[0.05] overflow-hidden">
+                      <div className="flex items-center justify-between p-3.5 rounded-xl bg-black/60 border border-white/[0.05]">
                         <span className="text-xs font-mono text-neutral-300 truncate select-all">{lic.key}</span>
                         <button
                           onClick={() => copyToClipboard(lic.key, `key-${idx}`)}
@@ -389,216 +372,155 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
           )}
 
           {/* 2. CÜZDAN */}
-{activeTab === 'wallet' && (
-  <div className="space-y-6">
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight text-white">Cüzdanım</h1>
-      <p className="text-sm text-neutral-400 mt-1">Bakiyenizi yönetin ve işlem geçmişinizi görüntüleyin.</p>
-    </div>
+          {activeTab === 'wallet' && (
+            <div className="space-y-6">
+              <div>
+                <h1 className="text-2xl font-black tracking-tight text-white">Cüzdanım</h1>
+                <p className="text-sm text-neutral-400 mt-1">Bakiyenizi yönetin ve ödeme yöntemlerini görüntüleyin.</p>
+              </div>
 
-    {/* Bakiye Kutusu */}
-    <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-r from-[#0c2217] via-[#09141f] to-[#140e24] p-8 flex items-center justify-between shadow-2xl">
-      <div>
-        <span className="text-xs text-neutral-400 font-medium">Toplam Bakiye</span>
-        <div className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mt-1.5">
-          {currentBalance} <span className="text-3xl font-medium text-neutral-200">$</span>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-3 mt-6">
-          <a
-            href="https://dexx-shop.mysellauth.com/products"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-5 py-2.5 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-bold tracking-tight transition cursor-pointer shadow-md inline-block"
-          >
-            + Bakiye Yükle
-          </a>
+              {/* Bakiye Kutusu */}
+              <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#120808] via-[#09090b] to-[#0a0a0f] p-8 sm:p-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-2xl">
+                <div>
+                  <span className="text-xs uppercase tracking-wider text-neutral-400 font-bold">Toplam Bakiye</span>
+                  <div className="text-4xl sm:text-6xl font-black text-white tracking-tight mt-2 flex items-baseline gap-1.5">
+                    <span>{Number(currentBalance).toFixed(2)}</span>
+                    <span className="text-2xl sm:text-3xl font-extrabold text-red-500">$</span>
+                  </div>
+                  
+                  {/* CANLI VE ŞIK BUTONLAR */}
+                  <div className="flex flex-wrap items-center gap-3.5 mt-8">
+                    <a
+                      href="https://dexx-shop.mysellauth.com/products"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-6 py-3 rounded-2xl bg-gradient-to-r from-red-600 to-[#ce1818] hover:from-red-500 hover:to-red-600 text-white text-xs font-extrabold tracking-wide uppercase transition-all duration-300 shadow-[0_0_25px_rgba(206,24,24,0.4)] hover:shadow-[0_0_35px_rgba(206,24,24,0.6)] hover:scale-[1.02] flex items-center gap-2 cursor-pointer no-underline"
+                    >
+                      <span className="text-sm leading-none">+</span>
+                      <span>Bakiye Yükle</span>
+                    </a>
 
-          <button
-            onClick={() => setIsRedeemOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-xs font-semibold text-white transition flex items-center gap-2 cursor-pointer"
-          >
-            <svg className="w-3.5 h-3.5 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-            </svg>
-            <span>Bakiye Kodu Bozdur</span>
-          </button>
-        </div>
-      </div>
+                    <button
+                      onClick={() => setIsRedeemOpen(true)}
+                      className="px-5 py-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.12] hover:border-white/30 text-xs font-bold text-white tracking-tight transition-all duration-200 flex items-center gap-2.5 cursor-pointer backdrop-blur-md hover:scale-[1.02]"
+                    >
+                      <svg className="w-4 h-4 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                      </svg>
+                      <span>Bakiye Kodu Bozdur</span>
+                    </button>
+                  </div>
+                </div>
 
-      <div className="w-24 h-24 rounded-2xl flex items-center justify-center opacity-25">
-        <svg className="w-20 h-20 text-neutral-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-        </svg>
-      </div>
-    </div>
+                <div className="hidden sm:flex w-28 h-28 rounded-3xl bg-red-950/20 border border-red-900/30 items-center justify-center shadow-inner">
+                  <svg className="w-14 h-14 text-red-500/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+              </div>
 
-    {/* 1. Satır Ödeme Kartları */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      
-      {/* Kredi Kartı / Kripto - SellAuth Bağlantısı */}
-<a
-  href="https://dexx-shop.mysellauth.com/products"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="relative bg-[#0b0b0e] border border-white/[0.08] hover:border-red-600/50 rounded-2xl p-5 flex flex-col items-center justify-center text-center transition cursor-pointer h-36 group hover:shadow-[0_0_20px_rgba(220,38,38,0.15)] no-underline"
->
-  <span className="absolute top-2 right-2 text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-800 text-emerald-400">
-    Aktif
-  </span>
-  <div className="w-12 h-8 rounded-md bg-neutral-800 border border-neutral-700 p-1 mb-3 flex flex-col justify-between group-hover:scale-105 group-hover:border-red-500/60 transition-transform">
-    <div className="w-3 h-2 rounded-[2px] bg-red-500" />
-  </div>
-  <h4 className="text-xs font-bold text-white tracking-tight">Kredi Kartı / Kripto</h4>
-  <p className="text-[10px] text-neutral-400 mt-0.5">Otomatik Yükleme</p>
-  <span className="text-[10px] text-neutral-400 group-hover:text-red-400 flex items-center gap-0.5 mt-0.5 transition">
-    <span>⚡ Hemen Yükle</span>
-  </span>
-</a>
-      {/* Kredi Kartı Global (Devre Dışı) */}
-      <div className="relative bg-[#0b0b0e] border border-white/[0.04] rounded-2xl p-5 flex flex-col items-center justify-center text-center opacity-45 cursor-not-allowed select-none h-36 overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-[120%] h-[1.5px] bg-rose-500/60 transform -rotate-12" />
-        </div>
-        <span className="absolute top-2 right-2 text-[8px] font-bold px-1.5 py-0.5 rounded bg-rose-950/80 border border-rose-800 text-rose-400">
-          Devre Dışı
-        </span>
-        <div className="w-12 h-8 rounded-md bg-neutral-800 border border-neutral-700 p-1 mb-3 flex flex-col justify-between grayscale">
-          <div className="w-3 h-2 rounded-[2px] bg-neutral-500" />
-        </div>
-        <h4 className="text-xs font-bold text-neutral-400 line-through">Kredi Kartı (Global & TR)</h4>
-        <p className="text-[10px] text-neutral-500 mt-0.5">3D Secure</p>
-      </div>
+              {/* 3'LÜ YENİ ÖDEME KARTLARI GRİDİ */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+                
+                {/* 1. KART: KREDİ KARTI / KRİPTO (SELLAUTH) */}
+                <a
+                  href="https://dexx-shop.mysellauth.com/products"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative bg-[#0c0c0f] border border-white/[0.08] hover:border-red-600/60 rounded-3xl p-6 flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer h-44 group hover:shadow-[0_0_30px_rgba(206,24,24,0.2)] hover:-translate-y-1 no-underline"
+                >
+                  <span className="absolute top-3.5 right-3.5 text-[9px] font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800 text-emerald-400">
+                    AKTİF
+                  </span>
+                  <div className="w-12 h-9 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:border-red-500/50 transition-all">
+                    <div className="w-3.5 h-2.5 rounded-[2px] bg-red-600" />
+                  </div>
+                  <h4 className="text-sm font-extrabold text-white tracking-tight">Kredi Kartı / Global Ödeme</h4>
+                  <p className="text-xs text-neutral-400 font-medium mt-1">SellAuth üzerinden</p>
+                  <span className="text-[11px] font-bold text-red-500 flex items-center gap-1 mt-1.5">
+                    <span>⚡ Otomatik Yükleme</span>
+                  </span>
+                </a>
 
-      {/* IBAN (Discord Yönlendirmeli) */}
-      <a
-        href={DISCORD_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="bg-[#0b0b0e] border border-white/[0.06] hover:border-white/[0.2] rounded-2xl p-5 flex flex-col items-center justify-center text-center transition cursor-pointer h-36 group"
-      >
-        <div className="w-11 h-9 rounded-lg bg-neutral-700 border-t-2 border-emerald-500 shadow-inner flex items-center justify-end px-1.5 mb-3 group-hover:scale-105 transition-transform">
-          <div className="w-2 h-2 rounded-full bg-neutral-300" />
-        </div>
-        <h4 className="text-xs font-bold text-white tracking-tight">IBAN</h4>
-        <p className="text-[11px] text-neutral-400 mt-0.5">Türk Banka Havalesi</p>
-        <span className="text-[10px] text-neutral-400 group-hover:text-emerald-400 flex items-center gap-0.5 mt-0.5 transition">
-          <span>↗ Discord üzerinden</span>
-        </span>
-      </a>
+                {/* 2. KART: IBAN (DİSCORD TİCKET) */}
+                <a
+                  href={DISCORD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative bg-[#0c0c0f] border border-white/[0.08] hover:border-white/30 rounded-3xl p-6 flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer h-44 group hover:shadow-[0_0_25px_rgba(255,255,255,0.06)] hover:-translate-y-1 no-underline"
+                >
+                  <div className="w-12 h-9 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-3 group-hover:scale-110 transition-all">
+                    <div className="w-4 h-3 border-t-2 border-emerald-500 bg-neutral-800 rounded-sm" />
+                  </div>
+                  <h4 className="text-sm font-extrabold text-white tracking-tight">IBAN</h4>
+                  <p className="text-xs text-neutral-400 font-medium mt-1">Türk kullanıcılar içindir.</p>
+                  <span className="text-[11px] font-bold text-neutral-400 group-hover:text-emerald-400 flex items-center gap-1 mt-1.5 transition-colors">
+                    <span>↗ Discord ticket üzerinden</span>
+                  </span>
+                </a>
 
-      {/* PayPal (Discord Yönlendirmeli) */}
-      <a
-        href={DISCORD_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="bg-[#0b0b0e] border border-white/[0.06] hover:border-white/[0.2] rounded-2xl p-5 flex flex-col items-center justify-center text-center transition cursor-pointer h-36 group"
-      >
-        <div className="w-10 h-10 mb-2 flex items-center justify-center font-black text-2xl italic tracking-tighter group-hover:scale-105 transition-transform">
-          <span className="text-blue-500">P</span>
-          <span className="text-indigo-400 -ml-1">P</span>
-        </div>
-        <h4 className="text-xs font-bold text-white tracking-tight">PayPal</h4>
-        <p className="text-[11px] text-neutral-400 mt-0.5">Anında Ödeme</p>
-        <span className="text-[10px] text-neutral-400 group-hover:text-blue-400 flex items-center gap-0.5 mt-0.5 transition">
-          <span>↗ Discord üzerinden</span>
-        </span>
-      </a>
-    </div>
+                {/* 3. KART: İTEMSATIŞ */}
+                {/* 3. İtemSatış (Doğrudan DexX Shop Profili) */}
+                <a
+                  href="https://www.itemsatis.com/profil/dexxshop.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative bg-[#0c0c0f] border border-white/[0.08] hover:border-amber-500/50 rounded-3xl p-6 flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer h-44 group hover:shadow-[0_0_30px_rgba(245,158,11,0.15)] hover:-translate-y-1 no-underline"
+                >
+                  <div className="w-12 h-9 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:border-amber-500/50 transition-all">
+                    <span className="text-amber-400 font-black text-xs tracking-tighter">İS</span>
+                  </div>
+                  <h4 className="text-sm font-extrabold text-white tracking-tight">İtemSatış</h4>
+                  <p className="text-xs text-neutral-400 font-medium mt-1">Tüm ödeme seçenekleri</p>
+                  <span className="text-[11px] font-bold text-amber-500/90 flex items-center gap-1 mt-1.5">
+                    <span>↗ İtemSatış üzerinden</span>
+                  </span>
+                </a>
 
-    {/* 2. Satır Ödeme Kartları */}
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      
-      {/* Crypto (Devre Dışı) */}
-      <div className="relative bg-[#0b0b0e] border border-white/[0.04] rounded-2xl p-5 flex flex-col items-center justify-center text-center opacity-45 cursor-not-allowed select-none h-36 overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-[120%] h-[1.5px] bg-rose-500/60 transform -rotate-12" />
-        </div>
-        <span className="absolute top-2 right-2 text-[8px] font-bold px-1.5 py-0.5 rounded bg-rose-950/80 border border-rose-800 text-rose-400">
-          Devre Dışı
-        </span>
-        <div className="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-700 flex items-center justify-center mb-2 grayscale">
-          <div className="w-3 h-5 border-l border-r border-neutral-500" />
-        </div>
-        <h4 className="text-xs font-bold text-neutral-400 line-through">Crypto</h4>
-        <p className="text-[10px] text-neutral-500 mt-0.5">BTC, LTC, TRX</p>
-      </div>
+              </div>
 
-      {/* Binance (Discord Yönlendirmeli) */}
-      <a
-        href={DISCORD_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="bg-[#0b0b0e] border border-white/[0.06] hover:border-white/[0.2] rounded-2xl p-5 flex flex-col items-center justify-center text-center transition cursor-pointer h-36 group"
-      >
-        <div className="w-10 h-10 mb-2 flex items-center justify-center group-hover:scale-105 transition-transform">
-          <div className="w-6 h-6 bg-[#F3BA2F] rotate-45 flex items-center justify-center shadow-md">
-            <div className="w-2.5 h-2.5 bg-[#0b0b0e]" />
-          </div>
-        </div>
-        <h4 className="text-xs font-bold text-white tracking-tight">Binance Hediye Kartı</h4>
-        <p className="text-[11px] text-neutral-400 mt-0.5">Anında Yükleme</p>
-        <span className="text-[10px] text-neutral-400 group-hover:text-amber-400 flex items-center gap-0.5 mt-0.5 transition">
-          <span>↗ Discord üzerinden</span>
-        </span>
-      </a>
+              {/* GÜVENLİK BİLGİLENDİRMESİ */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+                <div className="p-4 rounded-2xl bg-[#0b0b0e] border border-white/[0.05] flex items-start gap-3.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-950/80 border border-emerald-800 flex items-center justify-center text-emerald-400 shrink-0">
+                    ✓
+                  </div>
+                  <div className="space-y-0.5">
+                    <h5 className="text-xs font-bold text-white">Güvenli Ödeme</h5>
+                    <p className="text-[11px] text-neutral-400 leading-relaxed font-normal">
+                      Ödemeleriniz 256-bit SSL ile korunur. Kart bilgileriniz saklanmaz.
+                    </p>
+                  </div>
+                </div>
 
-      {/* Shopier (Devre Dışı) */}
-      <div className="relative bg-[#0b0b0e] border border-white/[0.04] rounded-2xl p-5 flex flex-col items-center justify-center text-center opacity-45 cursor-not-allowed select-none h-36 overflow-hidden">
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-[120%] h-[1.5px] bg-rose-500/60 transform -rotate-12" />
-        </div>
-        <span className="absolute top-2 right-2 text-[8px] font-bold px-1.5 py-0.5 rounded bg-rose-950/80 border border-rose-800 text-rose-400">
-          Devre Dışı
-        </span>
-        <div className="w-9 h-9 rounded-xl bg-neutral-800 flex items-center justify-center text-neutral-500 font-extrabold text-base mb-2 grayscale">
-          S
-        </div>
-        <h4 className="text-xs font-bold text-neutral-400 line-through">Shopier</h4>
-        <p className="text-[10px] text-neutral-500 mt-0.5">Banka/Kredi Kartı</p>
-      </div>
-    </div>
+                <div className="p-4 rounded-2xl bg-[#0b0b0e] border border-white/[0.05] flex items-start gap-3.5">
+                  <div className="w-8 h-8 rounded-xl bg-red-950/80 border border-red-800 flex items-center justify-center text-red-400 shrink-0">
+                    ⚡
+                  </div>
+                  <div className="space-y-0.5">
+                    <h5 className="text-xs font-bold text-white">Anında Teslimat</h5>
+                    <p className="text-[11px] text-neutral-400 leading-relaxed font-normal">
+                      Bakiye anında tanımlanır ve alışverişe hemen başlayabilirsiniz.
+                    </p>
+                  </div>
+                </div>
 
-    {/* 3. Satır Güvenlik Bilgilendirmesi */}
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-      <div className="p-4 rounded-2xl bg-[#0b0b0e] border border-white/[0.05] flex items-start gap-3.5">
-        <div className="w-8 h-8 rounded-xl bg-emerald-950/80 border border-emerald-800 flex items-center justify-center text-emerald-400 shrink-0">
-          ✓
-        </div>
-        <div className="space-y-0.5">
-          <h5 className="text-xs font-bold text-white">Güvenli Ödeme</h5>
-          <p className="text-[11px] text-neutral-400 leading-relaxed font-normal">
-            Ödemeleriniz 256-bit SSL ile korunmaktadır. Kart bilgileriniz saklanmaz.
-          </p>
-        </div>
-      </div>
+                <div className="p-4 rounded-2xl bg-[#0b0b0e] border border-white/[0.05] flex items-start gap-3.5">
+                  <div className="w-8 h-8 rounded-xl bg-neutral-900 border border-neutral-700 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+                    $
+                  </div>
+                  <div className="space-y-0.5">
+                    <h5 className="text-xs font-bold text-white">Dolar Bakiye Sistemi</h5>
+                    <p className="text-[11px] text-neutral-400 leading-relaxed font-normal">
+                      Tüm ürün ve cüzdan bakiyeleriniz USD ($) bazlı hesaplanmaktadır.
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-      <div className="p-4 rounded-2xl bg-[#0b0b0e] border border-white/[0.05] flex items-start gap-3.5">
-        <div className="w-8 h-8 rounded-xl bg-amber-950/80 border border-amber-800 flex items-center justify-center text-amber-400 shrink-0">
-          ⚡
-        </div>
-        <div className="space-y-0.5">
-          <h5 className="text-xs font-bold text-white">Anında Teslimat</h5>
-          <p className="text-[11px] text-neutral-400 leading-relaxed font-normal">
-            Bakiye anında tanımlanır ve alışverişe başlayabilirsiniz.
-          </p>
-        </div>
-      </div>
+            </div>
+          )}
 
-      <div className="p-4 rounded-2xl bg-[#0b0b0e] border border-white/[0.05] flex items-start gap-3.5">
-        <div className="w-8 h-8 rounded-xl bg-neutral-900 border border-neutral-700 flex items-center justify-center text-emerald-400 font-bold shrink-0">
-          €
-        </div>
-        <div className="space-y-0.5">
-          <h5 className="text-xs font-bold text-white">Euro Ödeme Sistemi</h5>
-          <p className="text-[11px] text-neutral-400 leading-relaxed font-normal">
-            Ödeme sistemimiz Euro üzerinedir, fiyat Euro olarak gözükecektir.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
           {/* 3. SATICI PANELİ */}
           {activeTab === 'seller' && (
             <div className="space-y-6">
@@ -632,7 +554,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                 <p className="text-sm text-neutral-400 mt-1">Hesap güvenliğinizi ve tercihlerinizi yapılandırın.</p>
               </div>
 
-              {/* Şifre Değiştir Formu */}
+              {/* Şifre Değiştir */}
               <div className="bg-[#0b0b0e] border border-white/[0.05] rounded-2xl p-6 max-w-xl space-y-4">
                 <h3 className="text-sm font-semibold text-white">Şifre Değiştir</h3>
                 
@@ -688,7 +610,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                 </form>
               </div>
 
-              {/* Bizi Nereden Gördünüz Anket */}
+              {/* Anket */}
               <div className="bg-[#0b0b0e] border border-white/[0.05] rounded-2xl p-6 max-w-xl space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-white">Bizi Nereden Gördünüz?</h3>
@@ -697,7 +619,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                   </span>
                 </div>
                 <p className="text-xs text-neutral-400 leading-relaxed font-normal">
-                  Bizi nereden duyduğunuzu seçerek topluluğumuzu ve platformumuzu geliştirmemize yardımcı olun.
+                  Bizi nereden duyduğunuzu seçerek platformumuzu geliştirmemize yardımcı olun.
                 </p>
 
                 <div className="grid grid-cols-2 gap-3 pt-1">
@@ -734,7 +656,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
       {/* SİLME ONAY MODALI */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-[#0e0e11] border border-red-900/40 rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="w-full max-w-md bg-[#0e0e11] border border-red-900/40 rounded-2xl p-6 shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-rose-950/60 border border-rose-800/80 flex items-center justify-center text-rose-400 text-lg">
                 ⚠️
@@ -748,7 +670,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
             </div>
 
             <p className="text-xs text-neutral-300 leading-relaxed font-normal bg-black/40 p-3 rounded-xl border border-white/[0.05]">
-              Bu aktif ürünü silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve lisans anahtarınız hesabınızdan kaldırılır.
+              Bu aktif ürünü silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
             </p>
 
             <div className="flex items-center justify-end gap-2.5 pt-2">
@@ -791,7 +713,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
             </div>
 
             <p className="text-xs text-neutral-400 leading-relaxed font-normal">
-              Admin panelden oluşturulan promosyon kodunu girerek cüzdanınıza anında yükleme yapabilirsiniz.
+              İtemSatış üzerinden veya yöneticilerden aldığınız bakiye kupon kodunu girerek cüzdanınıza anında yükleme yapabilirsiniz.
             </p>
 
             {redeemMsg && (
@@ -830,7 +752,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                 <button
                   type="submit"
                   disabled={isRedeeming}
-                  className="px-5 py-2 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-semibold tracking-tight transition cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold tracking-tight transition cursor-pointer disabled:opacity-50 shadow-lg shadow-red-950/50"
                 >
                   {isRedeeming ? 'Kontrol Ediliyor...' : 'Kodu Tanımla'}
                 </button>

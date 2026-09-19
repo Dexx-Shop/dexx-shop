@@ -105,10 +105,10 @@ export default async function AdminPage() {
             <span>Yeni Ürün / Mod Ekle</span>
           </h2>
           <p className="text-xs text-neutral-400 mb-6">
-            Vitrine eklenecek yeni oyun modunu, durumunu ve fiyatlandırma paketlerini belirleyin.
+            Vitrine eklenecek yeni oyun modunu, video/görsel medyasını, durumunu ve fiyatlarını belirleyin.
           </p>
 
-          <form action={addProductAction} className="space-y-4 max-w-2xl">
+          <form action={addProductAction} className="space-y-4 max-w-3xl">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
@@ -155,16 +155,29 @@ export default async function AdminPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Medya & Video */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
-                  Görsel Bağlantısı (URL)
+                  Kapak Görseli (URL)
                 </label>
                 <input
                   name="image"
                   type="url"
                   required
-                  placeholder="https://... veya /gorsel.png"
+                  placeholder="https://... (Ana görsel)"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
+                  Tanıtım Videosu Linki
+                </label>
+                <input
+                  name="videoUrl"
+                  type="url"
+                  placeholder="YouTube veya .mp4 linki"
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition"
                 />
               </div>
@@ -177,10 +190,22 @@ export default async function AdminPage() {
                   name="securityTag"
                   type="text"
                   defaultValue="Undetected"
-                  placeholder="Undetected, Use at Own Risk..."
+                  placeholder="Undetected"
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
+                Ek Görseller (Her satıra bir görsel linki)
+              </label>
+              <textarea
+                name="mediaUrls"
+                rows={2}
+                placeholder="https://...&#10;https://..."
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-red-600 transition resize-none font-mono"
+              />
             </div>
 
             <div>

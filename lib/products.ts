@@ -7,6 +7,11 @@ export interface ProductPricing {
   lifetime?: number;
 }
 
+export interface FeatureCategory {
+  title: string;
+  items: string[];
+}
+
 export interface Product {
   id: string;
   title: string;
@@ -16,6 +21,13 @@ export interface Product {
   securityTag: string;
   status?: 'active' | 'updating' | 'inactive';
   pricing: ProductPricing;
+  media?: string[];
+  videoUrl?: string;
+  features?: FeatureCategory[];
+  systemReqs?: {
+    os: string;
+    cpu: string;
+  };
   stock?: {
     daily?: boolean;
     weekly?: boolean;
@@ -40,8 +52,12 @@ export async function getProducts(): Promise<Product[]> {
       image: p.image,
       description: p.description || '',
       securityTag: p.security_tag || 'Undetected',
-      status: p.status || 'active', // Varsayılan olarak active (Güvenli)
+      status: p.status || 'active',
       pricing: p.pricing || { daily: 0, weekly: 0, monthly: 0 },
+      media: p.media || (p.image ? [p.image] : []),
+      videoUrl: p.video_url || '',
+      features: p.features || [],
+      systemReqs: p.system_reqs || { os: 'Windows 10 / 11', cpu: 'Intel / AMD' },
       stock: p.stock || { daily: true, weekly: true, monthly: true, lifetime: true },
     }));
   } catch {
@@ -68,6 +84,10 @@ export async function getProductById(id: string): Promise<Product | null> {
       securityTag: data.security_tag || 'Undetected',
       status: data.status || 'active',
       pricing: data.pricing || { daily: 0, weekly: 0, monthly: 0 },
+      media: data.media || (data.image ? [data.image] : []),
+      videoUrl: data.video_url || '',
+      features: data.features || [],
+      systemReqs: data.system_reqs || { os: 'Windows 10 / 11', cpu: 'Intel / AMD' },
       stock: data.stock || { daily: true, weekly: true, monthly: true, lifetime: true },
     };
   } catch {
@@ -85,10 +105,14 @@ export async function insertProduct(product: Product): Promise<boolean> {
     security_tag: product.securityTag,
     status: product.status || 'active',
     pricing: product.pricing,
+    media: product.media || [product.image],
+    video_url: product.videoUrl || '',
+    features: product.features || [],
+    system_reqs: product.systemReqs || { os: 'Windows 10 / 11', cpu: 'Intel / AMD' }
   });
 
   if (error) {
-    console.error('Supabase ürün ekleme hatası:', error.message);
+    console.error('Supabase insert hatası:', error.message);
     throw new Error(error.message);
   }
   return true;
@@ -105,11 +129,15 @@ export async function updateProductInDb(product: Product): Promise<boolean> {
       security_tag: product.securityTag,
       status: product.status || 'active',
       pricing: product.pricing,
+      media: product.media || [product.image],
+      video_url: product.videoUrl || '',
+      features: product.features || [],
+      system_reqs: product.systemReqs || { os: 'Windows 10 / 11', cpu: 'Intel / AMD' }
     })
     .eq('id', product.id);
 
   if (error) {
-    console.error('Supabase ürün güncelleme hatası:', error.message);
+    console.error('Supabase update hatası:', error.message);
     throw new Error(error.message);
   }
   return true;
@@ -117,9 +145,6 @@ export async function updateProductInDb(product: Product): Promise<boolean> {
 
 export async function removeProductById(id: string): Promise<boolean> {
   const { error } = await supabaseAdmin.from('products').delete().eq('id', id);
-  if (error) {
-    console.error('Supabase ürün silme hatası:', error.message);
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
   return true;
 }

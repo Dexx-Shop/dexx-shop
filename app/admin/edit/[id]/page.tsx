@@ -18,13 +18,14 @@ export default async function EditProductPage(props: {
   if (!product) redirect('/admin');
 
   const stock = product.stock || { daily: true, weekly: true, monthly: true, lifetime: true };
+  const mediaRawValue = product.media && product.media.length > 0 ? product.media.join('\n') : product.image || '';
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 text-white pb-24">
       <div className="flex items-center justify-between mb-8 pb-4 border-b border-neutral-800">
         <div>
           <h1 className="text-2xl font-bold">Modu Düzenle</h1>
-          <p className="text-xs text-neutral-400 mt-1">Fiyatlar, stok durumları ve mod detaylarını güncelleyin</p>
+          <p className="text-xs text-neutral-400 mt-1">Fiyatlar, medya galerisi, video ve mod detaylarını güncelleyin.</p>
         </div>
         <Link
           href="/admin"
@@ -35,10 +36,10 @@ export default async function EditProductPage(props: {
       </div>
 
       <div className="bg-neutral-900/60 border border-neutral-800 rounded-3xl p-6 sm:p-8 backdrop-blur-xl">
-        <form action={updateProductAction} encType="multipart/form-data" className="space-y-6">
+        <form action={updateProductAction} className="space-y-6">
           <input type="hidden" name="id" value={product.id} />
-          <input type="hidden" name="currentImage" value={product.image} />
 
+          {/* Temel Bilgiler */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
               <label className="block text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-semibold">Mod Adı</label>
@@ -67,27 +68,79 @@ export default async function EditProductPage(props: {
               <label className="block text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-semibold">Güvenlik Etiketi</label>
               <input
                 name="securityTag"
-                defaultValue={product.securityTag}
+                defaultValue={product.securityTag || 'Undetected'}
                 required
                 className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm focus:outline-none focus:border-red-600"
               />
             </div>
           </div>
 
-          {/* Lisans Fiyatları & Stok Kutucukları */}
+          {/* Medya & Video Ayarları */}
+          <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-2xl p-5 space-y-4">
+            <span className="text-xs uppercase font-bold text-red-500 tracking-wider block">
+              Medya & Tanıtım Galerisi
+            </span>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-neutral-400 mb-1 font-semibold">
+                  Ana Kapak Görseli (URL)
+                </label>
+                <input
+                  name="image"
+                  type="url"
+                  defaultValue={product.image}
+                  required
+                  placeholder="https://... (Ana vitrin görseli)"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider text-neutral-400 mb-1 font-semibold">
+                  Tanıtım Videosu (YouTube veya .mp4 linki)
+                </label>
+                <input
+                  name="videoUrl"
+                  type="url"
+                  defaultValue={product.videoUrl || ''}
+                  placeholder="https://www.youtube.com/watch?v=... veya doğrudan .mp4"
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-600"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-neutral-400 mb-1 font-semibold">
+                Çoklu Ek Görseller (Her satıra bir görsel bağlantısı)
+              </label>
+              <textarea
+                name="mediaUrls"
+                rows={3}
+                defaultValue={mediaRawValue}
+                placeholder="https://resim1.png&#10;https://resim2.png"
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-600 resize-none font-mono"
+              />
+              <p className="text-[10px] text-neutral-500 mt-1">
+                Sayfadaki galeri slider'ında bu görseller listelenecektir.
+              </p>
+            </div>
+          </div>
+
+          {/* Lisans Fiyatları, Durum & Stok */}
           <div className="bg-neutral-950/60 border border-neutral-800/80 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-neutral-800/60 pb-3">
               <span className="text-xs uppercase font-bold text-red-500 tracking-wider">
                 Lisans Fiyatları & Stok Durumu ($ USD)
               </span>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-neutral-400">Durum:</span>
+                <span className="text-xs text-neutral-400">Ürün Durumu:</span>
                 <select
                   name="status"
-                  defaultValue={product.status}
-                  className="bg-neutral-900 border border-neutral-800 rounded-lg px-2.5 py-1 text-xs text-neutral-200 focus:outline-none focus:border-red-600 cursor-pointer"
+                  defaultValue={product.status || 'active'}
+                  className="bg-neutral-900 border border-neutral-800 rounded-lg px-2.5 py-1 text-xs text-neutral-200 focus:outline-none focus:border-red-600 cursor-pointer font-semibold"
                 >
-                  <option value="active">🟢 Aktif / Güncel</option>
+                  <option value="active">🟢 Aktif / Güvenli</option>
                   <option value="updating">🟡 Güncelleniyor</option>
                   <option value="inactive">🔴 Bakımda</option>
                 </select>
@@ -169,26 +222,15 @@ export default async function EditProductPage(props: {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-semibold">Yeni Görsel Yükle (İsteğe Bağlı)</label>
-              <input
-                type="file"
-                name="imageFile"
-                accept="image/*"
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-xs text-neutral-300 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-neutral-800 file:text-white hover:file:bg-neutral-700 cursor-pointer"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-semibold">Açıklama</label>
-              <textarea
-                name="description"
-                defaultValue={product.description}
-                rows={4}
-                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm focus:outline-none focus:border-red-600"
-              />
-            </div>
+          {/* Açıklama */}
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider text-neutral-400 mb-1.5 font-semibold">Açıklama</label>
+            <textarea
+              name="description"
+              defaultValue={product.description}
+              rows={4}
+              className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-3 text-sm focus:outline-none focus:border-red-600"
+            />
           </div>
 
           <button

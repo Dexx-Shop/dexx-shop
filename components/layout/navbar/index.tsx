@@ -20,130 +20,146 @@ export async function Navbar() {
   }
 
   return (
-    // z-40 seviyesine çekildi (CartDrawer z-50 olduğu için sepet açılınca navbar altta kalır)
-// components/navbar/index.tsx dosyasında en dış header:
-<header className="fixed top-7 inset-x-0 z-40 flex justify-center px-4 sm:px-6 pointer-events-none">
-      <nav className="pointer-events-auto relative w-full max-w-7xl h-14 rounded-full bg-[#0c0c0e]/90 backdrop-blur-xl border border-white/[0.08] shadow-[0_10px_35px_rgba(0,0,0,0.6)] flex items-center justify-between px-5 sm:px-8 font-sans">
+    <header className="absolute top-0 inset-x-0 z-40 w-full select-none bg-transparent">
+      {/* Geniş ve ferah kapsayıcı */}
+      <nav className="w-full max-w-[1600px] mx-auto h-28 px-6 sm:px-12 lg:px-16 flex items-center justify-between">
         
-        {/* SOL: LOGO & MARKA ADI */}
-        <div className="flex items-center gap-3 z-10 shrink-0">
-          <Link href="/" className="flex items-center gap-2.5 group select-none">
-            <div className="relative w-8 h-8 flex items-center justify-center">
-              <Image
-                src="/logo.png"
-                alt="DexX Logo"
-                width={32}
-                height={32}
-                className="w-full h-full object-contain filter drop-shadow-[0_0_10px_rgba(239,68,68,0.5)] group-hover:drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] group-hover:scale-105 transition-all duration-300"
-                priority
-              />
-            </div>
-            
-            <span className="text-[17px] tracking-tight font-extrabold flex items-center transition-all duration-200">
-              <span className="text-red-500 drop-shadow-[0_0_12px_rgba(239,68,68,0.6)] group-hover:text-red-400">
-                DexX
-              </span>
-              <span className="text-white ml-1.5 font-bold tracking-normal drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] group-hover:text-neutral-100">
-                Shop
-              </span>
+        {/* SOL: LOGO & MARKA */}
+        <Link href="/" className="flex items-center gap-3.5 group shrink-0">
+          <div className="relative w-10 h-10 flex items-center justify-center">
+            <Image
+              src="/logo.png"
+              alt="DexX Logo"
+              width={40}
+              height={40}
+              className="w-full h-full object-contain filter drop-shadow-[0_0_15px_rgba(239,68,68,0.6)] group-hover:scale-105 transition-transform duration-300"
+              priority
+            />
+          </div>
+          <span className="text-2xl font-black tracking-tight flex items-center">
+            <span className="text-red-500 drop-shadow-[0_0_18px_rgba(239,68,68,0.7)] group-hover:text-red-400 transition-colors">
+              DexX
             </span>
-          </Link>
-        </div>
+            <span className="text-white ml-2 font-extrabold tracking-normal group-hover:text-neutral-200">
+              Shop
+            </span>
+          </span>
+        </Link>
 
-        {/* ORTA: MERKEZE ORTALANAN MENÜ LİNKLERİ */}
-        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-8 text-[13.5px] font-medium tracking-tight">
+        {/* ORTA: MENÜ LİNKLERİ (FERAH ARALIKLAR) */}
+        <div className="hidden lg:flex items-center gap-12 text-[15px] font-semibold tracking-wide">
           <Link 
             href="/" 
-            className="text-white hover:text-white transition font-medium"
+            className="text-white hover:text-red-500 transition-colors duration-200"
           >
             Anasayfa
           </Link>
           <Link 
             href="/#products" 
-            className="text-[#9ca3af] hover:text-white transition font-medium"
+            className="text-neutral-400 hover:text-white transition-colors duration-200"
           >
             Ürünler
           </Link>
           <Link 
             href="/status" 
-            className="text-[#9ca3af] hover:text-white transition font-medium"
+            className="text-neutral-400 hover:text-white transition-colors duration-200"
           >
             Durum
           </Link>
           <Link 
             href="/support" 
-            className="text-[#9ca3af] hover:text-white transition font-medium"
+            className="text-neutral-400 hover:text-white transition-colors duration-200"
           >
             Destek
           </Link>
         </div>
 
-        {/* SAĞ: YÖNETİM, CÜZDAN, SEPET, PROFİL & DİL BUTONU */}
-        <div className="flex items-center gap-2.5 z-10 shrink-0">
+        {/* SAĞ: LUSIVE BİREBİR BUTONLAR */}
+        <div className="flex items-center gap-5 shrink-0">
           
-          {/* Yönetici Rozeti */}
+          {/* Yönetici Butonu */}
           {isOwnerOrAdmin && (
             <Link
               href="/admin"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-950/40 border border-red-800/60 text-red-400 hover:text-red-300 text-xs font-medium tracking-tight hover:bg-red-900/40 transition mr-1"
+              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-950/40 border border-red-800/60 text-red-400 hover:text-red-300 text-xs font-bold tracking-tight hover:bg-red-900/50 transition-all shadow-[0_0_15px_rgba(239,68,68,0.2)]"
             >
               <span>🛡️</span>
               <span>Yönetim</span>
             </Link>
           )}
 
-          {/* Cüzdan Rozeti */}
+          {/* Bakiye Rozeti (Kırmızı DexX Temalı) */}
           {user && (
             <Link
               href="/profile"
-              className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#1c0d0f] border border-red-900/40 hover:border-red-600/60 transition group cursor-pointer"
+              className="flex items-center gap-2.5 h-10 px-2 rounded-2xl bg-black border border-white/[0.08] hover:border-[#ce1818]/60 transition-all select-none group shadow-[0_0_10px_rgba(0,0,0,0.5)] hover:shadow-[0_0_15px_rgba(206,24,24,0.2)]"
             >
-              <div className="w-5 h-5 rounded-md bg-red-950/80 border border-red-800/60 flex items-center justify-center text-red-400 group-hover:text-red-300 transition">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              {/* Sol: Cüzdan İkonu Kutusu */}
+              <div className="w-7 h-7 rounded-[10px] bg-black flex items-center justify-center border border-[#ce1818]/30 group-hover:border-[#ce1818] transition-colors shrink-0">
+                <svg
+                  className="w-4 h-4 text-[#ce1818]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+                  <rect x="7" y="7" width="14" height="10" rx="2" />
+                  <circle cx="16" cy="12" r="1" fill="currentColor" />
                 </svg>
               </div>
 
-              <span className="text-xs font-bold text-white tracking-tight">
+              {/* Orta: Beyaz Kalın Bakiye Değeri */}
+              <span className="text-sm font-extrabold text-white tracking-tight px-0.5">
                 ${Number(balance).toFixed(2)}
               </span>
 
-              <div className="w-4 h-4 rounded-full bg-red-600/80 group-hover:bg-red-500 text-white flex items-center justify-center text-[11px] font-bold leading-none transition">
-                +
+              {/* Sağ: Kırmızı Artı (+) Buton Kutusu */}
+              <div className="w-5 h-5 rounded-[8px] bg-[#ce1818] flex items-center justify-center border border-[#ce1818]/40 group-hover:bg-red-600 transition-colors shrink-0">
+                <span className="text-xs font-black text-white leading-none mb-0.5">
+                  +
+                </span>
               </div>
             </Link>
           )}
 
-          {/* Sepet Butonu */}
-          <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-white/[0.04] hover:bg-red-950/40 border border-white/[0.06] hover:border-red-900/50 transition text-neutral-300 hover:text-red-400 cursor-pointer">
-            <Suspense fallback={<div className="w-4 h-4" />}>
+          {/* LUSIVE BİREBİR: CART BUTONU */}
+          <div className="relative flex items-center">
+            <Suspense fallback={<div className="w-28 h-10 rounded-full border border-red-500/30 animate-pulse" />}>
               <CartButton />
             </Suspense>
           </div>
 
-          {/* Profil Butonu */}
+          {/* LUSIVE BİREBİR: DASHBOARD / PANEL BUTONU (TAM OVAL CANLI BUTON) */}
           {user ? (
             <Link
               href="/profile"
-              title={`Profil: @${user.username || user.email}`}
-              className="w-8 h-8 rounded-full bg-white/[0.04] hover:bg-red-950/40 border border-white/[0.06] hover:border-red-900/50 flex items-center justify-center text-neutral-300 hover:text-red-400 transition"
+              className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-red-600 hover:bg-red-500 text-white text-sm font-bold tracking-tight shadow-[0_0_25px_rgba(239,68,68,0.5)] hover:shadow-[0_0_35px_rgba(239,68,68,0.8)] transition-all transform hover:scale-[1.03] active:scale-[0.98]"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              {/* Lusive Giriş/Kapı Logosu */}
+              <svg className="w-4 h-4 stroke-[2.4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l3 3m0 0l-3 3m3-3H9" />
               </svg>
+              <span>Panel</span>
             </Link>
           ) : (
             <Link
               href="/login"
-              className="px-4 py-1.5 rounded-full bg-white text-black hover:bg-neutral-200 text-xs font-semibold tracking-tight transition shadow-sm ml-1"
+              className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-red-600 hover:bg-red-500 text-white text-sm font-bold tracking-tight shadow-[0_0_25px_rgba(239,68,68,0.5)] hover:shadow-[0_0_35px_rgba(239,68,68,0.8)] transition-all transform hover:scale-[1.03] active:scale-[0.98]"
             >
-              Giriş Yap
+              <svg className="w-4 h-4 stroke-[2.4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l3 3m0 0l-3 3m3-3H9" />
+              </svg>
+              <span>Giriş Yap</span>
             </Link>
           )}
 
-          {/* DİL DEĞİŞTİRME BUTONU (TR / EN) */}
-          {/* DİL DEĞİŞTİRME BUTONU (TR / EN) */}
-<LanguageToggle />
+          {/* Dil Değiştirici */}
+          <div className="pl-1">
+            <LanguageToggle />
+          </div>
 
         </div>
 

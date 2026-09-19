@@ -76,24 +76,30 @@ export async function processCartCheckout(
     }
   }
 
-  // 3. Siparişi Doğrudan Supabase'e Kaydet (Vercel için kalıcı çözüm)
+ // 3. Siparişi Doğrudan Supabase'e Kaydet
   try {
-    const { error: orderError } = await supabaseAdmin.from('orders').insert({
-      id: masterOrderCode,
-      user_id: String(user.id),
-      username: user.username || 'Kullanıcı',
-      delivery_email: cleanEmail,
-      items: items,
-      total_amount: totalAmount,
-      status: 'pending',
-      created_at: new Date().toISOString()
-    });
+    const { data: orderData, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .insert([
+        {
+          id: masterOrderCode,
+          user_id: String(user.id),
+          username: user.username || 'Kullanıcı',
+          delivery_email: cleanEmail,
+          items: items, // jsonb sütununa doğrudan dizi objesi
+          total_amount: totalAmount,
+          status: 'pending'
+        }
+      ])
+      .select();
 
     if (orderError) {
-      console.error('Supabase sipariş kayıt hatası:', orderError.message);
+      console.error('🚨 SUPABASE ORDERS INSERT HATASI:', orderError.message, orderError.details);
+    } else {
+      console.log('✅ Sipariş başarıyla Supabase orders tablosuna kaydedildi:', orderData);
     }
   } catch (dbErr) {
-    console.error('Supabase sipariş insert beklenmeyen hata:', dbErr);
+    console.error('🚨 Beklenmeyen hata (orders insert):', dbErr);
   }
 
   return {

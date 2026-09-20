@@ -17,6 +17,8 @@ export default async function HomePage() {
 
       {/* Kategorili Ürün Kataloğu */}
       <ProductCatalog products={products || []} />
+
+
     </div>
   );
 }

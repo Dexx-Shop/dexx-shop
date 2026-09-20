@@ -7,6 +7,13 @@ export interface ProductPricing {
   lifetime?: number;
 }
 
+export interface ProductPackage {
+  id: string;
+  name: string;
+  price: number;
+  badge?: string;
+}
+
 export interface FeatureCategory {
   title: string;
   items: string[];
@@ -20,6 +27,7 @@ export interface Product {
   description: string;
   securityTag: string;
   status?: 'active' | 'updating' | 'inactive';
+  packages?: ProductPackage[];
   pricing: ProductPricing;
   media?: string[];
   videoUrl?: string;
@@ -53,6 +61,7 @@ export async function getProducts(): Promise<Product[]> {
       description: p.description || '',
       securityTag: p.security_tag || 'Undetected',
       status: p.status || 'active',
+      packages: p.packages || [],
       pricing: p.pricing || { daily: 0, weekly: 0, monthly: 0 },
       media: p.media || (p.image ? [p.image] : []),
       videoUrl: p.video_url || '',
@@ -83,6 +92,7 @@ export async function getProductById(id: string): Promise<Product | null> {
       description: data.description || '',
       securityTag: data.security_tag || 'Undetected',
       status: data.status || 'active',
+      packages: data.packages || [],
       pricing: data.pricing || { daily: 0, weekly: 0, monthly: 0 },
       media: data.media || (data.image ? [data.image] : []),
       videoUrl: data.video_url || '',
@@ -95,7 +105,7 @@ export async function getProductById(id: string): Promise<Product | null> {
   }
 }
 
-export async function insertProduct(product: Product): Promise<boolean> {
+export async function insertProduct(product: any): Promise<boolean> {
   const { error } = await supabaseAdmin.from('products').insert({
     id: product.id,
     title: product.title,
@@ -104,6 +114,7 @@ export async function insertProduct(product: Product): Promise<boolean> {
     description: product.description,
     security_tag: product.securityTag,
     status: product.status || 'active',
+    packages: product.packages || [],
     pricing: product.pricing,
     media: product.media || [product.image],
     video_url: product.videoUrl || '',
@@ -118,7 +129,7 @@ export async function insertProduct(product: Product): Promise<boolean> {
   return true;
 }
 
-export async function updateProductInDb(product: Product): Promise<boolean> {
+export async function updateProductInDb(product: any): Promise<boolean> {
   const { error } = await supabaseAdmin
     .from('products')
     .update({
@@ -128,6 +139,7 @@ export async function updateProductInDb(product: Product): Promise<boolean> {
       description: product.description,
       security_tag: product.securityTag,
       status: product.status || 'active',
+      packages: product.packages || [],
       pricing: product.pricing,
       media: product.media || [product.image],
       video_url: product.videoUrl || '',

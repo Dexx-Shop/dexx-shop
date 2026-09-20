@@ -1,6 +1,5 @@
 import { getProducts } from 'lib/products';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,16 +9,28 @@ interface CategoryPageProps {
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params;
-  const decodedGame = slug.toUpperCase();
+  const decodedGame = (slug || '').toLowerCase();
 
   const allProducts = await getProducts();
-  const categoryProducts = allProducts.filter(
-    (p) => (p.game || '').toUpperCase() === decodedGame
-  );
 
-  if (categoryProducts.length === 0 && decodedGame !== 'RUST' && decodedGame !== 'FIVEM') {
-    notFound();
-  }
+  // Oyun adına veya başlığına göre dinamik filtreleme (Rust, FiveM, Valorant, Fortnite vb.)
+  const categoryProducts = allProducts.filter((p: any) => {
+    const game = (p.game || '').toLowerCase();
+    const title = (p.title || '').toLowerCase();
+    return game.includes(decodedGame) || title.includes(decodedGame);
+  });
+
+  // Güzel başlık haritalaması
+  const categoryTitles: Record<string, string> = {
+    rust: 'Rust',
+    fivem: 'FiveM / GTA V',
+    valorant: 'Valorant',
+    fortnite: 'Fortnite',
+    cs2: 'Counter-Strike 2',
+    account: 'Hesap / Account',
+  };
+
+  const displayName = categoryTitles[decodedGame] || decodedGame.toUpperCase();
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-red-600 selection:text-white pb-24 px-4 sm:px-6 lg:px-8 pt-28 sm:pt-36">
@@ -30,12 +41,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           <div className="flex items-center gap-2 text-xs text-neutral-400 font-medium">
             <Link href="/" className="hover:text-white transition">Anasayfa</Link>
             <span>/</span>
-            <span className="text-red-500 font-bold uppercase">{decodedGame} Ürünleri</span>
+            <span className="text-red-500 font-bold uppercase">{displayName} Ürünleri</span>
           </div>
 
           <Link
             href="/#products"
-            className="text-xs px-3.5 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-300 transition"
+            className="text-xs px-3.5 py-1.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-300 transition cursor-pointer"
           >
             ← Tüm Kategoriler
           </Link>
@@ -48,23 +59,50 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             <span>Kategori Vitrini</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white uppercase">
-            {decodedGame} <span className="text-red-600">Yazılımları</span>
+            {displayName} <span className="text-red-600">Yazılımları</span>
           </h1>
           <p className="text-xs sm:text-sm text-neutral-400">
-            {decodedGame} için optimize edilmiş, güncel ve undetected modlar listelenmektedir.
+            {displayName} için optimize edilmiş, en güncel ve undetected yazılımlar listelenmektedir.
           </p>
         </div>
 
         {/* Ürün Listesi Grid */}
         {categoryProducts.length === 0 ? (
-          <div className="text-center py-20 bg-neutral-950/60 border border-neutral-800 rounded-3xl backdrop-blur-md space-y-3">
+          <div className="text-center py-20 bg-neutral-950/60 border border-neutral-800 rounded-3xl backdrop-blur-md space-y-4">
             <span className="text-4xl block">📦</span>
-            <p className="text-neutral-400 text-sm">Bu kategoride henüz aktif ürün bulunmuyor.</p>
+            <h3 className="text-base font-bold text-white">Bu kategoride henüz aktif ürün bulunmuyor.</h3>
+            <p className="text-neutral-400 text-xs max-w-sm mx-auto">
+              Admin panelinden oyun kategorisi olarak "{displayName}" seçerek yeni ürün eklediğinizde otomatik olarak burada listelenecektir.
+            </p>
+            <Link
+              href="/#products"
+              className="inline-block text-xs font-bold px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl transition cursor-pointer"
+            >
+              Diğer Kategorilere Göz At
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {categoryProducts.map((product) => {
-              const minPrice = product.pricing?.daily || product.pricing?.weekly || product.pricing?.monthly || 0;
+            {categoryProducts.map((product: any) => {
+              // Hem dinamik packages hem eski pricing üzerinden en düşük başlangıç fiyatı hesabı
+              const prices: number[] = [];
+              if (product.packages && Array.isArray(product.packages)) {
+                product.packages.forEach((pkg: any) => {
+                  if (pkg.price && Number(pkg.price) > 0) prices.push(Number(pkg.price));
+                });
+              }
+              if (product.pricing) {
+                [
+                  product.pricing.daily,
+                  product.pricing.weekly,
+                  product.pricing.monthly,
+                  product.pricing.lifetime,
+                ].forEach((pr) => {
+                  if (pr && Number(pr) > 0) prices.push(Number(pr));
+                });
+              }
+              const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+
               const isSafe = product.status === 'active';
               const isUpdating = product.status === 'updating';
 
@@ -116,7 +154,12 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
                   <div className="p-5 pt-0 flex items-center justify-between border-t border-neutral-900 mt-4">
                     <div>
                       <span className="text-[10px] uppercase font-bold text-neutral-500 block">Başlangıç</span>
-                      <span className="text-base font-black text-white font-mono">${minPrice} <span className="text-[11px] text-neutral-400 font-normal">USD</span></span>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-base font-black text-white font-mono">
+                          ${minPrice > 0 ? minPrice.toFixed(2) : '0.00'}
+                        </span>
+                        <span className="text-[11px] font-bold text-red-500">USD</span>
+                      </div>
                     </div>
 
                     <span className="text-xs font-bold px-3.5 py-2 rounded-xl bg-red-600/10 text-red-400 border border-red-900/40 group-hover:bg-red-600 group-hover:text-white transition">

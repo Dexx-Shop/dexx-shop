@@ -18,6 +18,13 @@ interface AdminDashboardClientProps {
   orderLogs: any[];
 }
 
+interface NewPackageItem {
+  id: string;
+  name: string;
+  price: number;
+  badge?: string;
+}
+
 export default function AdminDashboardClient({
   user,
   isOwner,
@@ -26,10 +33,64 @@ export default function AdminDashboardClient({
   coupons,
   orderLogs,
 }: AdminDashboardClientProps) {
-  // Varsayılan açık sekme: 'tickets' veya 'products'
+  // Varsayılan açık sekme
   const [activeTab, setActiveTab] = useState<
     'tickets' | 'products' | 'new_product' | 'orders' | 'coupons' | 'team' | 'hero'
   >('tickets');
+
+  // Yeni ürün için dinamik paket listesi
+  const [newPackages, setNewPackages] = useState<NewPackageItem[]>([
+    { id: 'pkg_1', name: 'Lifetime', price: 15, badge: 'Süresiz' },
+  ]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function addNewPackageRow() {
+    setNewPackages((prev) => [
+      ...prev,
+      {
+        id: 'pkg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 5),
+        name: 'Yeni Paket',
+        price: 5,
+        badge: '',
+      },
+    ]);
+  }
+
+  function removeNewPackageRow(id: string) {
+    if (newPackages.length === 1) {
+      alert('En az 1 adet paket/fiyat seçeneği bulunmalıdır.');
+      return;
+    }
+    setNewPackages((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  function updateNewPackageRow(id: string, key: 'name' | 'price' | 'badge', val: string | number) {
+    setNewPackages((prev) =>
+      prev.map((pkg) => (pkg.id === id ? { ...pkg, [key]: val } : pkg))
+    );
+  }
+
+  async function handleAddProduct(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (newPackages.length === 0) {
+      alert('Lütfen en az bir adet paket tanımlayın.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const formData = new FormData(e.currentTarget);
+    formData.set('packages_json', JSON.stringify(newPackages));
+
+    const res = await addProductAction(formData);
+    setIsSubmitting(false);
+
+    if (res?.success) {
+      alert('Ürün başarıyla yayına alındı!');
+      window.location.reload();
+    } else {
+      alert(res?.error || 'Ürün eklenirken bir sorun oluştu.');
+    }
+  }
 
   const navItems = [
     { id: 'tickets', label: 'Destek Talepleri', icon: '🎫', badge: null },
@@ -48,7 +109,7 @@ export default function AdminDashboardClient({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       
-      {/* SOL TARAFI: DİKEY SEKME / KATEGORİ MENÜSÜ (3 Sütun) */}
+      {/* SOL MENÜ */}
       <aside className="lg:col-span-3 lg:sticky lg:top-28 space-y-2 bg-[#0c0c10] border border-white/[0.08] p-3.5 rounded-3xl shadow-2xl">
         <div className="px-3 py-2 border-b border-white/[0.06] mb-2">
           <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
@@ -88,41 +149,41 @@ export default function AdminDashboardClient({
         </nav>
       </aside>
 
-      {/* SAĞ TARAFI: SEÇİLEN SEKMEYE ÖZGÜ İÇERİK ALANI (9 Sütun) */}
+      {/* SAĞ İÇERİK ALANI */}
       <main className="lg:col-span-9 space-y-6">
         
-        {/* 1. DESTEK TALEPLERİ SEKMESİ */}
+        {/* 1. DESTEK TALEPLERİ */}
         {activeTab === 'tickets' && (
           <div className="animate-in fade-in duration-200">
             <TicketManager currentUserId={user.id} />
           </div>
         )}
 
-        {/* 2. YAYINDAKİ MODLAR LİSTESİ SEKMESİ */}
+        {/* 2. YAYINDAKİ MODLAR */}
         {activeTab === 'products' && (
           <section className="bg-[#0c0c10] border border-white/[0.08] rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-2xl animate-in fade-in duration-200">
             <div className="flex items-center justify-between border-b border-white/[0.06] pb-4 mb-6">
               <div>
                 <h2 className="text-lg font-bold text-white flex items-center gap-2">
                   <span>🎮</span>
-                  <span>Yayındaki Modlar & Yazılımlar</span>
+                  <span>Yayındaki Modlar & Ürünler</span>
                 </h2>
                 <p className="text-xs text-neutral-400 mt-0.5">
-                  Fiyat, stok ve durumunu değiştirmek istediğiniz modu düzenleyin.
+                  Paketlerini, fiyatlarını veya durumunu değiştirmek istediğiniz ürünü düzenleyin.
                 </p>
               </div>
               <button
                 onClick={() => setActiveTab('new_product')}
                 className="text-xs font-bold px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition cursor-pointer"
               >
-                + Yeni Mod Ekle
+                + Yeni Ürün Ekle
               </button>
             </div>
             <ProductListManager initialProducts={products} />
           </section>
         )}
 
-        {/* 3. YENİ ÜRÜN / MOD EKLEME FORMU SEKMESİ */}
+        {/* 3. YENİ ÜRÜN EKLEME (DİNAMİK PAKET DESTEKLİ) */}
         {activeTab === 'new_product' && (
           <section className="bg-[#0c0c10] border border-white/[0.08] rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-2xl animate-in fade-in duration-200">
             <div className="border-b border-white/[0.06] pb-4 mb-6">
@@ -131,11 +192,11 @@ export default function AdminDashboardClient({
                 <span>Yeni Ürün / Mod Yayınla</span>
               </h2>
               <p className="text-xs text-neutral-400 mt-0.5">
-                Vitrine eklenecek yeni oyun modunu, video/görsel medyasını, durumunu ve fiyatlarını belirleyin.
+                Ürününüzün detaylarını ve istediğiniz süre/fiyat paketlerini serbestçe belirleyin.
               </p>
             </div>
 
-            <form action={addProductAction} className="space-y-4">
+            <form onSubmit={handleAddProduct} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
@@ -145,14 +206,14 @@ export default function AdminDashboardClient({
                     name="title"
                     type="text"
                     required
-                    placeholder="Örn: DexX Rust Private"
+                    placeholder="Örn: Rust No Recoil veya Rust Account"
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
-                    Oyun Kategorisi
+                    Kategori / Oyun
                   </label>
                   <select
                     name="game"
@@ -162,6 +223,9 @@ export default function AdminDashboardClient({
                   >
                     <option value="RUST">RUST</option>
                     <option value="FIVEM">FIVEM</option>
+                    <option value="VALORANT">VALORANT</option>
+                    <option value="CS2">CS2</option>
+                    <option value="ACCOUNT">ACCOUNT / HESAP</option>
                   </select>
                 </div>
 
@@ -192,7 +256,7 @@ export default function AdminDashboardClient({
                     name="image"
                     type="url"
                     required
-                    placeholder="https://... (Ana görsel)"
+                    placeholder="https://... (Görsel URL)"
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition"
                   />
                 </div>
@@ -204,7 +268,7 @@ export default function AdminDashboardClient({
                   <input
                     name="videoUrl"
                     type="url"
-                    placeholder="YouTube veya .mp4 linki"
+                    placeholder="YouTube veya .mp4 linki (Opsiyonel)"
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition"
                   />
                 </div>
@@ -217,7 +281,7 @@ export default function AdminDashboardClient({
                     name="securityTag"
                     type="text"
                     defaultValue="Undetected"
-                    placeholder="Undetected"
+                    placeholder="Undetected veya Anında Teslimat"
                     className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition"
                   />
                 </div>
@@ -237,75 +301,109 @@ export default function AdminDashboardClient({
 
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">
-                  Açıklama & Özellikler
+                  Ürün Açıklaması
                 </label>
                 <textarea
                   name="description"
                   rows={3}
-                  placeholder="Aimbot, ESP, Misc özellikleri..."
+                  placeholder="Ürün hakkında detaylı bilgi girin..."
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 transition resize-none"
                 />
               </div>
 
-              {/* Fiyatlandırma */}
-              <div className="grid grid-cols-3 gap-3 pt-2">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">Günlük ($)</label>
-                  <input
-                    name="price_daily"
-                    type="number"
-                    step="0.01"
-                    placeholder="5.00"
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-sm text-white font-mono"
-                  />
+              {/* DİNAMİK PAKETLER VE FİYAT LİSTESİ */}
+              <div className="border border-white/[0.08] bg-black/40 rounded-2xl p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-white block">Paket ve Fiyat Seçenekleri</span>
+                    <span className="text-[10px] text-neutral-400">
+                      Örn: Rust Account için tek bir "Lifetime = $25" satırı bırakabilir veya birden fazla süre ekleyebilirsiniz.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addNewPackageRow}
+                    className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold transition cursor-pointer shadow-md shadow-red-950/40"
+                  >
+                    + Paket Ekle
+                  </button>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">Haftalık ($)</label>
-                  <input
-                    name="price_weekly"
-                    type="number"
-                    step="0.01"
-                    placeholder="15.00"
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-sm text-white font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">Aylık ($)</label>
-                  <input
-                    name="price_monthly"
-                    type="number"
-                    step="0.01"
-                    placeholder="35.00"
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl p-2.5 text-sm text-white font-mono"
-                  />
+
+                <div className="space-y-2.5 pt-1">
+                  {newPackages.map((pkg) => (
+                    <div
+                      key={pkg.id}
+                      className="flex items-center gap-2.5 bg-[#09090c] border border-white/[0.06] p-2.5 rounded-xl"
+                    >
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          placeholder="Paket Adı (Örn: Lifetime, 3 Günlük, 1 Haftalık)"
+                          value={pkg.name}
+                          onChange={(e) => updateNewPackageRow(pkg.id, 'name', e.target.value)}
+                          required
+                          className="w-full bg-black/60 border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-600 font-medium"
+                        />
+                      </div>
+                      <div className="w-28">
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="Fiyat ($)"
+                          value={pkg.price}
+                          onChange={(e) => updateNewPackageRow(pkg.id, 'price', parseFloat(e.target.value) || 0)}
+                          required
+                          className="w-full bg-black/60 border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-red-600"
+                        />
+                      </div>
+                      <div className="w-32">
+                        <input
+                          type="text"
+                          placeholder="Rozet (Örn: Popüler)"
+                          value={pkg.badge || ''}
+                          onChange={(e) => updateNewPackageRow(pkg.id, 'badge', e.target.value)}
+                          className="w-full bg-black/60 border border-white/[0.08] rounded-lg px-3 py-2 text-xs text-neutral-300 focus:outline-none focus:border-red-600"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeNewPackageRow(pkg.id)}
+                        className="px-2 py-1 text-neutral-500 hover:text-red-400 text-sm cursor-pointer"
+                        title="Paketi Kaldır"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase px-6 py-3 rounded-xl transition cursor-pointer shadow-lg shadow-red-950 mt-2"
+                disabled={isSubmitting}
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-black text-xs uppercase px-8 py-3.5 rounded-xl transition duration-300 cursor-pointer shadow-lg shadow-red-950 mt-2 disabled:opacity-50"
               >
-                + Ürünü Yayınla
+                {isSubmitting ? 'Yayınlanıyor...' : '+ Ürünü Yayınla'}
               </button>
             </form>
           </section>
         )}
 
-        {/* 4. SİPARİŞ & KEY LOGLARI SEKMESİ */}
+        {/* 4. SİPARİŞ & KEY LOGLARI */}
         {activeTab === 'orders' && isOwner && (
           <div className="animate-in fade-in duration-200">
             <OrderLogsManager initialOrders={orderLogs} />
           </div>
         )}
 
-        {/* 5. BAKİYE KUPONLARI SEKMESİ */}
+        {/* 5. BAKİYE KUPONLARI */}
         {activeTab === 'coupons' && isOwner && (
           <div className="animate-in fade-in duration-200">
             <CouponManager initialCoupons={coupons} />
           </div>
         )}
 
-        {/* 6. YETKİLİ KADROSU SEKMESİ */}
+        {/* 6. YETKİLİ KADROSU */}
         {activeTab === 'team' && (
           <section className="space-y-4 animate-in fade-in duration-200">
             <div className="border-b border-white/[0.06] pb-3">
@@ -319,7 +417,7 @@ export default function AdminDashboardClient({
           </section>
         )}
 
-        {/* 7. HERO DUYURU AYARLARI SEKMESİ */}
+        {/* 7. HERO DUYURU AYARLARI */}
         {activeTab === 'hero' && (
           <div className="animate-in fade-in duration-200">
             <AdminHeroSettings />

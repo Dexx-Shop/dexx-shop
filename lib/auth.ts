@@ -1,7 +1,6 @@
+import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-import fs from 'fs';
 import { cookies } from 'next/headers';
-import path from 'path';
 import { sendPasswordResetMail, sendVerificationCode } from './mail';
 
 export type UserRole = 'owner' | 'admin' | 'moderator' | 'user';
@@ -19,59 +18,48 @@ export interface User {
   createdAt: string;
 }
 
-interface PendingRegistration {
-  fullName: string;
-  username: string;
-  email: string;
-  passwordHash: string;
-  refCode?: string;
-  code: string;
-  expiresAt: number;
-}
-
-interface PasswordResetToken {
-  email: string;
-  expiresAt: number;
-}
-
-const pendingVerifications = new Map<string, PendingRegistration>();
-const resetTokens = new Map<string, PasswordResetToken>();
-
+// Supabase Admin İstemcisi (Service Role veya Anon Key ile)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // PROJENİN ASIL KURUCU / SÜPER ADMİN E-POSTASI:
 export const SUPER_ADMIN_EMAIL = 'dexxmarkett@gmail.com';
-
-const usersFilePath = path.join(process.cwd(), 'data', 'users.json');
-
-function ensureUsersFile() {
-  const dir = path.dirname(usersFilePath);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(usersFilePath)) fs.writeFileSync(usersFilePath, JSON.stringify([]), 'utf-8');
-}
 
 export function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
 export async function getUsers(): Promise<User[]> {
-  ensureUsersFile();
   try {
-    const data = fs.readFileSync(usersFilePath, 'utf-8');
-    return JSON.parse(data);
+    const { data, error } = await supabase.from('users').select('*');
+    if (error || !data) return [];
+    return data as User[];
   } catch {
     return [];
   }
 }
 
 export async function findUserByEmail(email: string): Promise<User | null> {
-  const users = await getUsers();
-  return users.find((u) => u.email.toLowerCase() === email.toLowerCase().trim()) || null;
+  const cleanEmail = email.toLowerCase().trim();
+  const { data } = await supabase
+    .from('users')
+    .select('*')
+    .ilike('email', cleanEmail)
+    .maybeSingle();
+
+  return (data as User) || null;
 }
 
 export async function findUserByUsername(username: string): Promise<User | null> {
-  const users = await getUsers();
   const search = (username || '').toLowerCase().trim();
-  return users.find((u) => u.username && u.username.toLowerCase() === search) || null;
+  const { data } = await supabase
+    .from('users')
+    .select('*')
+    .ilike('username', search)
+    .maybeSingle();
+
+  return (data as User) || null;
 }
 
 export async function initiateRegistration(data: {
@@ -81,7 +69,6 @@ export async function initiateRegistration(data: {
   password: string;
   refCode?: string;
 }): Promise<{ success: boolean; error?: string }> {
-  ensureUsersFile();
   const cleanEmail = data.email.toLowerCase().trim();
   const cleanUsername = data.username.toLowerCase().trim();
 
@@ -100,12 +87,13 @@ export async function initiateRegistration(data: {
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-  pendingVerifications.set(cleanEmail, {
+  // RAM yerine doğrudan veritabanına yazıyoruz (Vercel sunucuları değişse de kaybolmaz)
+  await supabase.from('pending_verifications').upsert({
+    email: cleanEmail,
     fullName: data.fullName.trim(),
     username: cleanUsername,
-    email: cleanEmail,
-    refCode: data.refCode?.trim() || '',
     passwordHash: hashPassword(data.password),
+    refCode: data.refCode?.trim() || '',
     code,
     expiresAt: Date.now() + 10 * 60 * 1000
   });
@@ -117,18 +105,21 @@ export async function initiateRegistration(data: {
 }
 
 export async function verifyAndCreateUser(email: string, inputCode: string): Promise<{ success: boolean; error?: string }> {
-  ensureUsersFile();
   const cleanEmail = email.toLowerCase().trim();
-  const pending = pendingVerifications.get(cleanEmail);
+
+  const { data: pending } = await supabase
+    .from('pending_verifications')
+    .select('*')
+    .eq('email', cleanEmail)
+    .maybeSingle();
 
   if (!pending) return { success: false, error: 'Kayıt talebi bulunamadı veya süresi doldu.' };
-  if (Date.now() > pending.expiresAt) {
-    pendingVerifications.delete(cleanEmail);
+  if (Date.now() > Number(pending.expiresAt)) {
+    await supabase.from('pending_verifications').delete().eq('email', cleanEmail);
     return { success: false, error: 'Kodun süresi dolmuş.' };
   }
   if (pending.code !== inputCode.trim()) return { success: false, error: 'Hatalı doğrulama kodu.' };
 
-  const users = await getUsers();
   const isSuperAdmin = cleanEmail === SUPER_ADMIN_EMAIL.toLowerCase();
 
   const newUser: User = {
@@ -144,9 +135,10 @@ export async function verifyAndCreateUser(email: string, inputCode: string): Pro
     createdAt: new Date().toISOString()
   };
 
-  users.push(newUser);
-  fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2), 'utf-8');
-  pendingVerifications.delete(cleanEmail);
+  const { error } = await supabase.from('users').insert([newUser]);
+  if (error) return { success: false, error: 'Kullanıcı kaydedilemedi: ' + error.message };
+
+  await supabase.from('pending_verifications').delete().eq('email', cleanEmail);
 
   return { success: true };
 }
@@ -157,7 +149,8 @@ export async function createPasswordResetRequest(email: string, origin: string):
   if (!user) return { success: false, error: 'Bu e-posta adresine ait bir hesap bulunamadı.' };
 
   const token = crypto.randomBytes(32).toString('hex');
-  resetTokens.set(token, {
+  await supabase.from('reset_tokens').upsert({
+    token,
     email: cleanEmail,
     expiresAt: Date.now() + 15 * 60 * 1000
   });
@@ -170,21 +163,30 @@ export async function createPasswordResetRequest(email: string, origin: string):
 }
 
 export async function resetPasswordWithToken(token: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
-  const session = resetTokens.get(token);
+  const { data: session } = await supabase
+    .from('reset_tokens')
+    .select('*')
+    .eq('token', token)
+    .maybeSingle();
+
   if (!session) return { success: false, error: 'Geçersiz bağlantı.' };
-  if (Date.now() > session.expiresAt) {
-    resetTokens.delete(token);
+  if (Date.now() > Number(session.expiresAt)) {
+    await supabase.from('reset_tokens').delete().eq('token', token);
     return { success: false, error: 'Bağlantının süresi dolmuş.' };
   }
   if (newPassword.length < 6) return { success: false, error: 'Şifre en az 6 karakter olmalıdır.' };
 
-  const users = await getUsers();
-  const userIndex = users.findIndex((u) => u.email.toLowerCase() === session.email.toLowerCase());
-  if (userIndex === -1) return { success: false, error: 'Kullanıcı bulunamadı.' };
+  const user = await findUserByEmail(session.email);
+  if (!user) return { success: false, error: 'Kullanıcı bulunamadı.' };
 
-  users[userIndex].passwordHash = hashPassword(newPassword);
-  fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2), 'utf-8');
-  resetTokens.delete(token);
+  const { error } = await supabase
+    .from('users')
+    .update({ passwordHash: hashPassword(newPassword) })
+    .eq('email', session.email.toLowerCase());
+
+  if (error) return { success: false, error: 'Şifre güncellenemedi.' };
+
+  await supabase.from('reset_tokens').delete().eq('token', token);
 
   return { success: true };
 }
@@ -200,7 +202,6 @@ export async function getCurrentUser(): Promise<User | null> {
     const user = await findUserByEmail(decoded.email);
     if (!user) return null;
 
-    // Süper admin kontrolü
     if (user.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() && user.role !== 'owner') {
       user.role = 'owner';
       user.adminSince = user.adminSince || user.createdAt;
@@ -214,43 +215,52 @@ export async function getCurrentUser(): Promise<User | null> {
 // Admin İşlemleri
 export async function getAdminUsers(): Promise<User[]> {
   const users = await getUsers();
-  return users.filter((u) => u.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() || u.role === 'owner' || u.role === 'admin' || u.role === 'moderator');
+  return users.filter(
+    (u) =>
+      u.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() ||
+      u.role === 'owner' ||
+      u.role === 'admin' ||
+      u.role === 'moderator'
+  );
 }
 
 export async function assignAdminRole(email: string, role: 'admin' | 'moderator'): Promise<{ success: boolean; error?: string }> {
   const cleanEmail = email.toLowerCase().trim();
-  const users = await getUsers();
-  const index = users.findIndex((u) => u.email.toLowerCase() === cleanEmail);
+  const user = await findUserByEmail(cleanEmail);
 
-  if (index === -1) {
+  if (!user) {
     return { success: false, error: 'Bu Gmail adresine sahip kayıtlı kullanıcı bulunamadı.' };
   }
 
-  if (users[index].email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+  if (user.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
     return { success: false, error: 'Kurucu hesap rolü değiştirilemez.' };
   }
 
-  users[index].role = role;
-  if (!users[index].adminSince) {
-    users[index].adminSince = new Date().toISOString();
-  }
+  const { error } = await supabase
+    .from('users')
+    .update({
+      role,
+      adminSince: user.adminSince || new Date().toISOString()
+    })
+    .eq('email', cleanEmail);
 
-  fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2), 'utf-8');
+  if (error) return { success: false, error: error.message };
   return { success: true };
 }
 
 export async function revokeAdminRole(userId: string): Promise<{ success: boolean; error?: string }> {
-  const users = await getUsers();
-  const index = users.findIndex((u) => u.id === userId);
+  const { data: user } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
 
-  if (index === -1) return { success: false, error: 'Kullanıcı bulunamadı.' };
-  if (users[index].email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+  if (!user) return { success: false, error: 'Kullanıcı bulunamadı.' };
+  if (user.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
     return { success: false, error: 'Kurucu yöneticinin yetkisi alınamaz.' };
   }
 
-  users[index].role = 'user';
-  delete users[index].adminSince;
+  const { error } = await supabase
+    .from('users')
+    .update({ role: 'user', adminSince: null })
+    .eq('id', userId);
 
-  fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2), 'utf-8');
+  if (error) return { success: false, error: error.message };
   return { success: true };
 }

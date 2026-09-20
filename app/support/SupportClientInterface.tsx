@@ -2,13 +2,13 @@
 
 import { supabase } from 'lib/supabase';
 import {
-    closeTicketAction,
-    createTicketAction,
-    getTicketMessagesAction,
-    getUserTicketsAction,
-    sendMessageAction,
-    Ticket,
-    TicketMessage,
+  closeTicketAction,
+  createTicketAction,
+  getTicketMessagesAction,
+  getUserTicketsAction,
+  sendMessageAction,
+  Ticket,
+  TicketMessage,
 } from 'lib/tickets';
 import { useEffect, useRef, useState } from 'react';
 
@@ -34,33 +34,42 @@ export default function SupportClientInterface({
 
   // Aktif bilet değişince mesajları ve realtime dinleyiciyi kur
   useEffect(() => {
-    if (!activeTicket) return;
+  if (!activeTicket) return;
 
-    getTicketMessagesAction(activeTicket.id).then((res) => setMessages(res || []));
+  // 1. Önce eski mesajları yükle
+  getTicketMessagesAction(activeTicket.id).then((res) => {
+    setMessages(res || []);
+  });
 
-    const channel = supabase
-      .channel(`ticket_channel_${activeTicket.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'ticket_messages',
-          filter: `ticket_id=eq.${activeTicket.id}`,
-        },
-        (payload) => {
+  // 2. Realtime Aboneliği
+  const channel = supabase
+    .channel(`room_${activeTicket.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'ticket_messages',
+      },
+      (payload) => {
+        const newMsg = payload.new as TicketMessage;
+        if (newMsg && newMsg.ticket_id === activeTicket.id) {
           setMessages((prev) => {
-            if (prev.some((m) => m.id === payload.new.id)) return prev;
-            return [...prev, payload.new as TicketMessage];
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
           });
         }
-      )
-      .subscribe();
+      }
+    )
+    .subscribe((status, err) => {
+      console.log('[Destek Realtime Durumu]:', status);
+      if (err) console.error('[Realtime Hatası]:', err);
+    });
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [activeTicket]);
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [activeTicket?.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

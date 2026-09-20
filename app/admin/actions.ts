@@ -1,33 +1,13 @@
 'use server';
 
-import fs from 'fs';
-import { getCurrentUser, User, UserRole } from 'lib/auth';
+import { getCurrentUser, UserRole } from 'lib/auth';
 import { insertProduct, removeProductById, updateProductInDb } from 'lib/products';
 import { supabaseAdmin } from 'lib/supabase';
 import { createCoupon, getCoupons } from 'lib/wallet';
 import { revalidatePath } from 'next/cache';
-import path from 'path';
-
-const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
-
-function getUsers(): User[] {
-  try {
-    if (!fs.existsSync(USERS_FILE)) return [];
-    const raw = fs.readFileSync(USERS_FILE, 'utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-function saveUsers(users: User[]) {
-  const dir = path.dirname(USERS_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-}
 
 // -------------------------------------------------------------
-// 1. ADMIN & YETKİ YÖNETİMİ
+// 1. ADMIN & YETKİ YÖNETİMİ (SUPABASE)
 // -------------------------------------------------------------
 
 export async function addAdminAction(formData: FormData) {
@@ -41,19 +21,26 @@ export async function addAdminAction(formData: FormData) {
 
   if (!email) return { success: false, error: 'E-posta adresi zorunludur.' };
 
-  const users = getUsers();
-  const targetUserIndex = users.findIndex((u) => u.email.toLowerCase() === email);
+  const { data: user, error: fetchErr } = await supabaseAdmin
+    .from('users')
+    .select('*')
+    .ilike('email', email)
+    .maybeSingle();
 
-  if (targetUserIndex === -1) {
+  if (fetchErr || !user) {
     return { success: false, error: 'Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.' };
   }
 
-  if (users[targetUserIndex]?.role === 'owner') {
+  if (user.role === 'owner') {
     return { success: false, error: 'Owner yetkisi değiştirilemez.' };
   }
 
-  users[targetUserIndex]!.role = role;
-  saveUsers(users);
+  const { error: updateErr } = await supabaseAdmin
+    .from('users')
+    .update({ role, adminSince: new Date().toISOString() })
+    .eq('id', user.id);
+
+  if (updateErr) return { success: false, error: updateErr.message };
 
   revalidatePath('/admin');
   return { success: true };
@@ -65,21 +52,19 @@ export async function removeAdminAction(userId: string) {
     return { success: false, error: 'Bu işlem için yetkiniz bulunmuyor.' };
   }
 
-  const users = getUsers();
-  const targetUserIndex = users.findIndex((u) => u.id === userId);
+  const { data: user } = await supabaseAdmin.from('users').select('*').eq('id', userId).maybeSingle();
+  if (!user) return { success: false, error: 'Kullanıcı bulunamadı.' };
+  if (user.role === 'owner') return { success: false, error: 'Owner yetkisi kaldırılamaz.' };
 
-  if (targetUserIndex === -1) return { success: false, error: 'Kullanıcı bulunamadı.' };
-  if (users[targetUserIndex]?.role === 'owner') return { success: false, error: 'Owner yetkisi kaldırılamaz.' };
-
-  users[targetUserIndex]!.role = 'user';
-  saveUsers(users);
+  const { error } = await supabaseAdmin.from('users').update({ role: 'user', adminSince: null }).eq('id', userId);
+  if (error) return { success: false, error: error.message };
 
   revalidatePath('/admin');
   return { success: true };
 }
 
 // -------------------------------------------------------------
-// 2. ÜRÜN & MOD YÖNETİMİ (EKLEME, DÜZENLEME, SİLME)
+// 2. ÜRÜN & DİNAMİK PAKET YÖNETİMİ (SUPABASE)
 // -------------------------------------------------------------
 
 export async function addProductAction(formData: FormData) {
@@ -97,13 +82,23 @@ export async function addProductAction(formData: FormData) {
   const securityTag = (formData.get('securityTag') as string)?.trim() || 'Undetected';
   const status = (formData.get('status') as any) || 'active';
 
+  // Dinamik paketler JSON'ı
+  const packagesJson = formData.get('packages_json') as string;
+  let parsedPackages: any[] = [];
+  try {
+    parsedPackages = packagesJson ? JSON.parse(packagesJson) : [];
+  } catch {
+    parsedPackages = [];
+  }
+
+  // Geriye dönük uyumluluk fiyatları (varsa)
+  const dailyPrice = parseFloat(formData.get('price_daily') as string) || (parsedPackages[0]?.price || 0);
+  const weeklyPrice = parseFloat(formData.get('price_weekly') as string) || (parsedPackages[1]?.price || 0);
+  const monthlyPrice = parseFloat(formData.get('price_monthly') as string) || (parsedPackages[2]?.price || 0);
+
   const mediaList = mediaRaw
     ? mediaRaw.split('\n').map((s) => s.trim()).filter(Boolean)
     : [image];
-
-  const dailyPrice = parseFloat(formData.get('price_daily') as string) || 0;
-  const weeklyPrice = parseFloat(formData.get('price_weekly') as string) || 0;
-  const monthlyPrice = parseFloat(formData.get('price_monthly') as string) || 0;
 
   if (!title || !game || !image) {
     return { success: false, error: 'Başlık, oyun kategorisi ve görsel bağlantısı zorunludur.' };
@@ -120,6 +115,7 @@ export async function addProductAction(formData: FormData) {
       description: description || '',
       securityTag,
       status,
+      packages: parsedPackages,
       pricing: {
         daily: dailyPrice,
         weekly: weeklyPrice,
@@ -152,13 +148,22 @@ export async function updateProductAction(formData: FormData) {
   const securityTag = (formData.get('securityTag') as string)?.trim() || 'Undetected';
   const status = (formData.get('status') as any) || 'active';
 
+  // Dinamik paketler JSON'ı
+  const packagesJson = formData.get('packages_json') as string;
+  let parsedPackages: any[] = [];
+  try {
+    parsedPackages = packagesJson ? JSON.parse(packagesJson) : [];
+  } catch {
+    parsedPackages = [];
+  }
+
+  const dailyPrice = parseFloat(formData.get('price_daily') as string) || (parsedPackages[0]?.price || 0);
+  const weeklyPrice = parseFloat(formData.get('price_weekly') as string) || (parsedPackages[1]?.price || 0);
+  const monthlyPrice = parseFloat(formData.get('price_monthly') as string) || (parsedPackages[2]?.price || 0);
+
   const mediaList = mediaRaw
     ? mediaRaw.split('\n').map((s) => s.trim()).filter(Boolean)
     : [image];
-
-  const dailyPrice = parseFloat(formData.get('price_daily') as string) || 0;
-  const weeklyPrice = parseFloat(formData.get('price_weekly') as string) || 0;
-  const monthlyPrice = parseFloat(formData.get('price_monthly') as string) || 0;
 
   if (!id || !title || !game || !image) {
     return { success: false, error: 'Tüm zorunlu alanları doldurun.' };
@@ -175,6 +180,7 @@ export async function updateProductAction(formData: FormData) {
       description: description || '',
       securityTag,
       status,
+      packages: parsedPackages,
       pricing: {
         daily: dailyPrice,
         weekly: weeklyPrice,
@@ -213,7 +219,7 @@ export const createProductAction = addProductAction;
 export const removeProductAction = deleteProductAction;
 
 // -------------------------------------------------------------
-// 3. BAKİYE KUPONU YÖNETİMİ (OWNER)
+// 3. BAKİYE KUPONU YÖNETİMİ
 // -------------------------------------------------------------
 
 export async function createCouponAction(formData: FormData) {
@@ -234,8 +240,7 @@ export async function createCouponAction(formData: FormData) {
     revalidatePath('/admin');
     return { success: true, coupon: newCoupon };
   } catch (err: any) {
-    console.error('Kupon üretim hatası:', err);
-    return { success: false, error: err?.message || 'Kupon veritabanına eklenemedi.' };
+    return { success: false, error: err?.message || 'Kupon oluşturulamadı.' };
   }
 }
 
@@ -248,7 +253,7 @@ export async function getCouponsAction() {
 }
 
 // -------------------------------------------------------------
-// 4. SİPARİŞ & LOG YÖNETİMİ (SUPABASE)
+// 4. SİPARİŞ & LOG YÖNETİMİ
 // -------------------------------------------------------------
 
 export async function getOrderLogsAction() {
@@ -263,10 +268,7 @@ export async function getOrderLogsAction() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Supabase sipariş çekme hatası:', error.message);
-      return [];
-    }
+    if (error) return [];
 
     return (data || []).map((row: any) => ({
       id: row.id,
@@ -278,8 +280,7 @@ export async function getOrderLogsAction() {
       status: row.status,
       createdAt: row.created_at
     }));
-  } catch (err) {
-    console.error('Sipariş logları getirilemedi:', err);
+  } catch {
     return [];
   }
 }
@@ -307,7 +308,6 @@ export async function toggleOrderStatusAction(orderId: string, currentStatus: st
   }
 }
 
-// Toplu Kupon Üretme Action'ı
 export async function createBulkCouponsAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user || user.role !== 'owner') {
@@ -321,36 +321,21 @@ export async function createBulkCouponsAction(formData: FormData) {
     return { success: false, error: 'Geçerli bir tutar ve adet giriniz.' };
   }
 
-  if (count > 200) {
-    return { success: false, error: 'Tek seferde en fazla 200 adet kod üretebilirsiniz.' };
-  }
-
-  // Rastgele güvenli kod oluşturucu (DEXX-XXXX-XXXX-XXXX)
-  const generateCode = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    const segment = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    return `DEXX-${segment()}-${segment()}-${segment()}`;
-  };
-
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const segment = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  
   const newCoupons = [];
   for (let i = 0; i < count; i++) {
     newCoupons.push({
-      code: generateCode(),
+      code: `DEXX-${segment()}-${segment()}-${segment()}`,
       amount: amount,
       isUsed: false,
       created_at: new Date().toISOString()
     });
   }
 
-  // Supabase 'coupons' tablosuna toplu kayıt (batch insert)
-  const { data, error } = await supabaseAdmin
-    .from('coupons')
-    .insert(newCoupons)
-    .select();
-
-  if (error) {
-    return { success: false, error: error.message };
-  }
+  const { data, error } = await supabaseAdmin.from('coupons').insert(newCoupons).select();
+  if (error) return { success: false, error: error.message };
 
   return { success: true, coupons: data || newCoupons };
 }

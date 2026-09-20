@@ -1,18 +1,24 @@
 'use client';
 
 import { useCart } from 'lib/cart';
-import { Product } from 'lib/products';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-export default function ProductClientView({ product }: { product: Product }) {
+export interface ProductPackage {
+  id: string;
+  name: string; // Örn: "3 Günlük", "1 Aylık", "Lifetime"
+  price: number;
+  badge?: string; // Örn: "Popüler", "En Avantajlı"
+}
+
+export default function ProductClientView({ product }: { product: any }) {
   const { addItem, openCart } = useCart();
 
   // Medya Havuzu: Video + Fotoğraflar
-  const initialMedia = [];
+  const initialMedia: { type: 'video' | 'image'; url: string }[] = [];
   if (product.videoUrl) initialMedia.push({ type: 'video', url: product.videoUrl });
   if (product.media && product.media.length > 0) {
-    product.media.forEach((m) => initialMedia.push({ type: 'image', url: m }));
+    product.media.forEach((m: string) => initialMedia.push({ type: 'image', url: m }));
   } else if (product.image) {
     initialMedia.push({ type: 'image', url: product.image });
   }
@@ -20,58 +26,46 @@ export default function ProductClientView({ product }: { product: Product }) {
   const [mediaList] = useState(initialMedia);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
 
-  // Paket Seçimi
-  const [selectedTier, setSelectedTier] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-  const [openFeatureCategory, setOpenFeatureCategory] = useState<string | null>('Aimbot');
+  // Dinamik Paketleri Belirleme (Geriye dönük uyumluluk: packages yoksa eski pricing'i dönüştür)
+  const availablePackages: ProductPackage[] = useMemo(() => {
+    if (product.packages && Array.isArray(product.packages) && product.packages.length > 0) {
+      return product.packages;
+    }
+    const legacy: ProductPackage[] = [];
+    if (product.pricing?.daily) {
+      legacy.push({ id: 'pkg_daily', name: '1 Günlük', price: Number(product.pricing.daily) });
+    }
+    if (product.pricing?.weekly) {
+      legacy.push({ id: 'pkg_weekly', name: '1 Haftalık', price: Number(product.pricing.weekly), badge: 'Popüler' });
+    }
+    if (product.pricing?.monthly) {
+      legacy.push({ id: 'pkg_monthly', name: '1 Aylık', price: Number(product.pricing.monthly), badge: 'En Avantajlı' });
+    }
+    return legacy.length > 0 ? legacy : [{ id: 'pkg_def', name: 'Standart Lisans', price: 0 }];
+  }, [product]);
 
-  const prices = {
-    daily: product.pricing?.daily || 0,
-    weekly: product.pricing?.weekly || 0,
-    monthly: product.pricing?.monthly || 0,
-  };
-
-  const activePrice = prices[selectedTier];
+  const [selectedPkgId, setSelectedPkgId] = useState<string>(availablePackages[0]?.id || '');
+  const activePackage = availablePackages.find((p) => p.id === selectedPkgId) || availablePackages[0];
 
   const handleAddToCart = () => {
+    if (!activePackage) return;
     addItem({
       id: product.id,
       title: product.title,
-      price: activePrice,
+      price: activePackage.price,
       image: product.image,
       game: product.game,
-      selectedTier: selectedTier === 'daily' ? 'Günlük' : selectedTier === 'weekly' ? 'Haftalık' : 'Aylık'
+      selectedTier: activePackage.name
     });
     openCart();
   };
 
   const currentMedia = mediaList[activeMediaIndex] || { type: 'image', url: product.image };
 
-  // Varsayılan Özellik Şablonu (Admin panelden gelmezse gösterilecek dolu liste)
-  const defaultFeatures = [
-    {
-      title: 'Silent Aimbot',
-      items: ['Target (Crosshair, Distance)', 'FOV Slider', 'Hit Rate Control', 'Only Visible', 'Bone Selection (Head, Neck, Chest)', 'Show FOV Circle']
-    },
-    {
-      title: 'Player Visuals (ESP)',
-      items: ['Box ESP (2D/Corner)', 'Skeleton ESP', 'Health Bar', 'Distance ESP', 'Snaplines', 'Player Names & Weapons', 'Sleeper ESP']
-    },
-    {
-      title: 'World & Radar',
-      items: ['Ore ESP (Sulfur, Metal, Stone)', 'Crate & Loot ESP', 'Dropped Items', 'Custom Mini-Radar', 'Air Drop Tracking']
-    },
-    {
-      title: 'Misc & Exploit',
-      items: ['No Recoil (Slider %)', 'No Spread', 'Always Day', 'Fast Bow', 'Spiderman / Climb Assist', 'Admin Flag Exploit']
-    }
-  ];
-
-  const displayFeatures = product.features && product.features.length > 0 ? product.features : defaultFeatures;
-
   return (
-    <div className="min-h-screen bg-[#070709] text-white selection:bg-red-600 selection:text-white pb-24 px-4 sm:px-6 lg:px-8 pt-28 sm:pt-36">
+    <div className="min-h-screen bg-[#050507] text-white selection:bg-red-600 selection:text-white pb-24 px-4 sm:px-6 lg:px-8 pt-28 sm:pt-36">
       <div className="max-w-7xl mx-auto">
-
+        
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-xs text-neutral-400 mb-6 font-medium">
           <Link href="/" className="hover:text-white transition">Anasayfa</Link>
@@ -83,7 +77,7 @@ export default function ProductClientView({ product }: { product: Product }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
 
-          {/* SOL ALAN: Galeri, Başlık, Özellikler (8 Kolon) */}
+          {/* SOL ALAN: Galeri, Başlık, Açıklama, Sistem Gereksinimleri */}
           <div className="lg:col-span-8 space-y-8">
 
             {/* Başlık ve Rozetler */}
@@ -104,14 +98,13 @@ export default function ProductClientView({ product }: { product: Product }) {
                   ⚡ {product.systemReqs?.cpu || 'Intel / AMD'}
                 </span>
                 <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-950/40 border border-red-900/50 text-red-400">
-                  🚀 Anında Teslimat
+                  🚀 Otomatik Teslimat
                 </span>
               </div>
             </div>
 
-            {/* Harman Tarzı Medya Sahnesi */}
+            {/* Medya Sahnesi */}
             <div className="bg-[#0b0b0e] border border-white/[0.08] rounded-3xl p-3 shadow-2xl overflow-hidden space-y-3">
-              {/* Ana Ekran */}
               <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black flex items-center justify-center border border-white/[0.05]">
                 {currentMedia.type === 'video' ? (
                   currentMedia.url.includes('youtube.com') || currentMedia.url.includes('youtu.be') ? (
@@ -168,52 +161,15 @@ export default function ProductClientView({ product }: { product: Product }) {
 
             {/* Açıklama */}
             <div className="space-y-3">
-              <h3 className="text-lg font-bold text-white tracking-wide">Açıklama</h3>
-              <p className="text-sm text-neutral-400 leading-relaxed bg-[#0b0b0e] border border-white/[0.06] p-5 rounded-2xl">
-                {product.description || 'Bu mod için detaylı bir açıklama girilmedi.'}
-              </p>
-            </div>
-
-            {/* Özellikler (Accordion / Harman Tarzı Tag Grupları) */}
-            <div className="space-y-3">
-              <h3 className="text-lg font-bold text-white tracking-wide">Özellikler & Detaylar</h3>
-              <div className="space-y-2.5">
-                {displayFeatures.map((cat, idx) => {
-                  const isOpen = openFeatureCategory === cat.title;
-                  return (
-                    <div
-                      key={idx}
-                      className="bg-[#0b0b0e] border border-white/[0.06] rounded-2xl overflow-hidden transition"
-                    >
-                      <button
-                        onClick={() => setOpenFeatureCategory(isOpen ? null : cat.title)}
-                        className="w-full px-5 py-4 flex items-center justify-between text-left font-bold text-sm text-white hover:bg-white/[0.02] cursor-pointer"
-                      >
-                        <span>{cat.title}</span>
-                        <span className="text-xs text-neutral-500">{isOpen ? '▲' : '▼'}</span>
-                      </button>
-
-                      {isOpen && (
-                        <div className="px-5 pb-5 pt-1 border-t border-white/[0.04] flex flex-wrap gap-2">
-                          {cat.items.map((feat, fIdx) => (
-                            <span
-                              key={fIdx}
-                              className="px-3 py-1.5 rounded-xl bg-black/60 border border-white/[0.08] text-xs text-neutral-300 font-medium"
-                            >
-                              {feat}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+              <h3 className="text-lg font-bold text-white tracking-wide">Ürün Açıklaması</h3>
+              <div className="text-sm text-neutral-300 leading-relaxed bg-[#0b0b0e] border border-white/[0.06] p-6 rounded-2xl whitespace-pre-line shadow-inner">
+                {product.description || 'Bu ürün için detaylı bir açıklama girilmedi.'}
               </div>
             </div>
 
             {/* Sistem Gereksinimleri */}
             <div className="space-y-3">
-              <h3 className="text-lg font-bold text-white tracking-wide">Sistem Gereksinimleri</h3>
+              <h3 className="text-lg font-bold text-white tracking-wide">Sistem Uyumluluğu</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-[#0b0b0e] border border-white/[0.06] p-4 rounded-2xl flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-lg">
@@ -221,7 +177,7 @@ export default function ProductClientView({ product }: { product: Product }) {
                   </div>
                   <div>
                     <span className="text-[10px] uppercase font-bold text-neutral-500 block">İşletim Sistemi</span>
-                    <span className="text-sm font-bold text-white">{product.systemReqs?.os || 'Windows 10 / 11'}</span>
+                    <span className="text-sm font-bold text-white">{product.systemReqs?.os || 'Windows 10 / 11 (Tüm Sürümler)'}</span>
                   </div>
                 </div>
 
@@ -239,128 +195,107 @@ export default function ProductClientView({ product }: { product: Product }) {
 
           </div>
 
-          {/* SAĞ ALAN: Sticky Satın Alma Kutusu (4 Kolon) */}
+          {/* SAĞ ALAN: Modern ve Canlı Satın Alma / Paket Seçim Kutusu */}
           <div className="lg:col-span-4">
-            <div className="sticky top-28 bg-[#0b0b0e] border border-white/[0.08] rounded-3xl p-6 shadow-2xl space-y-6">
+            <div className="sticky top-28 bg-[#0b0b0e]/95 backdrop-blur-xl border border-white/[0.08] rounded-3xl p-6 sm:p-7 shadow-[0_10px_40px_rgba(0,0,0,0.8)] space-y-6">
               
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-red-500 bg-red-950/60 border border-red-900/60 px-2.5 py-1 rounded-full">
-                  ORİJİNAL LİSANS
+                <span className="text-[10px] font-black uppercase tracking-wider text-red-500 bg-red-950/60 border border-red-800/50 px-3 py-1 rounded-full inline-block">
+                  DEXX SHOP GÜVENCESİ
                 </span>
-                <h2 className="text-2xl font-black text-white mt-3">{product.title}</h2>
+                <h2 className="text-2xl font-black text-white mt-3.5">{product.title}</h2>
                 <p className="text-xs text-neutral-400 mt-1">
-                  Kullanım sürenizi belirleyin ve cüzdan bakiyenizle anında satın alın.
+                  İhtiyacınıza uygun paketi seçin ve cüzdan bakiyenizle anında teslim alın.
                 </p>
               </div>
 
-              {/* Lisans Seçenekleri */}
+              {/* DİNAMİK PAKET SEÇENEKLERİ */}
               <div className="space-y-3">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 block">
-                  Paket Seçin
+                  Paket Seçeneği
                 </span>
 
-                {/* Günlük */}
-                <button
-                  onClick={() => setSelectedTier('daily')}
-                  className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between transition cursor-pointer ${
-                    selectedTier === 'daily'
-                      ? 'bg-red-950/20 border-red-600 shadow-md shadow-red-950/40'
-                      : 'bg-black/50 border-white/[0.06] hover:border-white/[0.15]'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                      selectedTier === 'daily' ? 'border-red-500 bg-red-600' : 'border-neutral-600'
-                    }`}>
-                      {selectedTier === 'daily' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-white block">1 Günlük</span>
-                      <span className="text-[10px] text-emerald-400">Stok Hazır</span>
-                    </div>
-                  </div>
-                  <span className="text-sm font-black font-mono text-white">${prices.daily}</span>
-                </button>
+                <div className="space-y-2.5">
+                  {availablePackages.map((pkg) => {
+                    const isSelected = selectedPkgId === pkg.id;
+                    return (
+                      <button
+                        key={pkg.id}
+                        type="button"
+                        onClick={() => setSelectedPkgId(pkg.id)}
+                        className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between transition-all duration-300 cursor-pointer relative overflow-hidden group ${
+                          isSelected
+                            ? 'bg-gradient-to-r from-red-950/40 via-red-900/20 to-transparent border-red-600 shadow-[0_0_25px_rgba(220,38,38,0.25)]'
+                            : 'bg-black/40 border-white/[0.06] hover:border-white/20 hover:bg-white/[0.02]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                            isSelected ? 'border-red-500 bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.8)]' : 'border-neutral-700 bg-neutral-900'
+                          }`}>
+                            {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-white">{pkg.name}</span>
+                              {pkg.badge && (
+                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-red-600/30 border border-red-500/50 text-red-400 tracking-wider">
+                                  {pkg.badge}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5 font-medium">
+                              <span className="w-1 h-1 rounded-full bg-emerald-400" />
+                              Stok Hazır • Anında Teslim
+                            </span>
+                          </div>
+                        </div>
 
-                {/* Haftalık */}
-                <button
-                  onClick={() => setSelectedTier('weekly')}
-                  className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between transition cursor-pointer ${
-                    selectedTier === 'weekly'
-                      ? 'bg-red-950/20 border-red-600 shadow-md shadow-red-950/40'
-                      : 'bg-black/50 border-white/[0.06] hover:border-white/[0.15]'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                      selectedTier === 'weekly' ? 'border-red-500 bg-red-600' : 'border-neutral-600'
-                    }`}>
-                      {selectedTier === 'weekly' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-white">1 Haftalık</span>
-                        <span className="text-[9px] bg-red-650 px-1.5 py-0.2 rounded text-red-400 font-bold">Popüler</span>
-                      </div>
-                      <span className="text-[10px] text-emerald-400">Stok Hazır</span>
-                    </div>
-                  </div>
-                  <span className="text-sm font-black font-mono text-white">${prices.weekly}</span>
-                </button>
-
-                {/* Aylık */}
-                <button
-                  onClick={() => setSelectedTier('monthly')}
-                  className={`w-full p-4 rounded-2xl border text-left flex items-center justify-between transition cursor-pointer ${
-                    selectedTier === 'monthly'
-                      ? 'bg-red-950/20 border-red-600 shadow-md shadow-red-950/40'
-                      : 'bg-black/50 border-white/[0.06] hover:border-white/[0.15]'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                      selectedTier === 'monthly' ? 'border-red-500 bg-red-600' : 'border-neutral-600'
-                    }`}>
-                      {selectedTier === 'monthly' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </div>
-                    <div>
-                      <span className="text-xs font-bold text-white block">1 Aylık</span>
-                      <span className="text-[10px] text-emerald-400">En Avantajlı</span>
-                    </div>
-                  </div>
-                  <span className="text-sm font-black font-mono text-white">${prices.monthly}</span>
-                </button>
+                        <div className="text-right">
+                          <span className={`text-base font-black font-mono tracking-tight ${isSelected ? 'text-white' : 'text-neutral-300'}`}>
+                            ${Number(pkg.price).toFixed(2)}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Fiyat & Sepete Ekle Butonları */}
-              <div className="pt-3 border-t border-white/[0.06] space-y-4">
-                <div className="flex items-center justify-between">
+              {/* Fiyat & Sepete Ekle */}
+              <div className="pt-4 border-t border-white/[0.06] space-y-4">
+                <div className="flex items-baseline justify-between">
                   <span className="text-xs text-neutral-400 font-medium">Ödenecek Tutar</span>
-                  <span className="text-3xl font-black text-white font-mono">${activePrice} <span className="text-sm text-neutral-400">USD</span></span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-white font-mono tracking-tight">
+                      ${Number(activePackage?.price || 0).toFixed(2)}
+                    </span>
+                    <span className="text-xs text-neutral-400 font-bold">USD</span>
+                  </div>
                 </div>
 
                 <button
                   onClick={handleAddToCart}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg shadow-red-950 cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 to-[#ce1818] hover:from-red-500 hover:to-red-600 text-white font-black text-xs uppercase tracking-wider transition-all duration-300 shadow-[0_0_25px_rgba(206,24,24,0.4)] hover:shadow-[0_0_35px_rgba(206,24,24,0.6)] hover:scale-[1.02] cursor-pointer flex items-center justify-center gap-2"
                 >
                   <span>🛒 Sepete Ekle & Satın Al</span>
                   <span>→</span>
                 </button>
               </div>
 
-              {/* Garanti / Güvenlik Şeridi */}
+              {/* Güvenlik Detayları */}
               <div className="space-y-2 pt-2 text-[11px] text-neutral-400">
                 <div className="flex items-center gap-2">
                   <span className="text-emerald-400 font-bold">✓</span>
-                  <span>Anında Otomatik Sipariş Kodu Üretimi</span>
+                  <span>Satın alma sonrası lisans anında kullanıcı paneline yansır</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-emerald-400 font-bold">✓</span>
-                  <span>7/24 Discord VIP Ticket & Kurulum Desteği</span>
+                  <span>noreply@dexxshop.com üzerinden e-posta teslimatı</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-emerald-400 font-bold">✓</span>
-                  <span>En Güncel Undetected Sürümler</span>
+                  <span>Discord VIP Ticket ile 7/24 kesintisiz kurulum desteği</span>
                 </div>
               </div>
 

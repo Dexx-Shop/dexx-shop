@@ -1,23 +1,18 @@
-import fs from 'fs';
 import { getCurrentUser } from 'lib/auth';
 import { getProducts } from 'lib/products';
+import { supabaseAdmin } from 'lib/supabase';
 import { getCoupons } from 'lib/wallet';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import path from 'path';
-
 import { getOrderLogsAction } from './actions';
 import AdminDashboardClient from './AdminDashboardClient';
 
 export const dynamic = 'force-dynamic';
 
-const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
-
-function getAllUsers() {
+async function getAllUsersFromSupabase() {
   try {
-    if (!fs.existsSync(USERS_FILE)) return [];
-    const raw = fs.readFileSync(USERS_FILE, 'utf-8');
-    return JSON.parse(raw);
+    const { data } = await supabaseAdmin.from('users').select('*');
+    return data || [];
   } catch {
     return [];
   }
@@ -32,7 +27,7 @@ export default async function AdminPage() {
 
   const isOwner = user.role === 'owner';
   const products = await getProducts();
-  const allUsers = getAllUsers();
+  const allUsers = await getAllUsersFromSupabase();
   const admins = allUsers.filter((u: any) => u.role === 'owner' || u.role === 'admin' || u.role === 'moderator');
   const coupons = await getCoupons();
   const orderLogs = await getOrderLogsAction();
@@ -64,7 +59,7 @@ export default async function AdminPage() {
           </Link>
         </div>
 
-        {/* Sol Menülü & Sekmeli Dinamik Yönetim Paneli */}
+        {/* Sekmeli Dinamik Yönetim Paneli */}
         <AdminDashboardClient
           user={user}
           isOwner={isOwner}

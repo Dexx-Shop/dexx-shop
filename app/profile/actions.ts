@@ -11,55 +11,67 @@ const USERS_FILE = path.join(process.cwd(), 'data', 'users.json');
 const LICENSES_FILE = path.join(process.cwd(), 'data', 'licenses.json');
 
 // 1. ŞİFRE DEĞİŞTİRME SERVER ACTION (auth.ts hashPassword ile tam uyumlu)
+
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseKey);
+
 export async function changePasswordAction(formData: FormData) {
-  const currentPassword = formData.get('currentPassword') as string;
-  const newPassword = formData.get('newPassword') as string;
-  const confirmPassword = formData.get('confirmPassword') as string;
-
-  if (!currentPassword || !newPassword || !confirmPassword) {
-    return { error: 'Lütfen tüm şifre alanlarını doldurun.' };
-  }
-
-  if (newPassword !== confirmPassword) {
-    return { error: 'Yeni şifreler birbiriyle uyuşmuyor.' };
-  }
-
-  if (newPassword.length < 6) {
-    return { error: 'Yeni şifre en az 6 karakter olmalıdır.' };
-  }
-
-  const currentUser = await getCurrentUser();
-  if (!currentUser) {
-    return { error: 'Oturum bulunamadı. Lütfen tekrar giriş yapın.' };
-  }
-
   try {
-    if (!fs.existsSync(USERS_FILE)) {
-      return { error: 'Kullanıcı veritabanı bulunamadı.' };
+    const user = await getCurrentUser();
+    if (!user) {
+      return { error: 'Oturum açmanız gerekiyor.' };
     }
 
-    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
-    const userIndex = users.findIndex(
-      (u: any) => u.id === currentUser.id || u.email?.toLowerCase() === currentUser.email?.toLowerCase()
-    );
+    const currentPassword = formData.get('currentPassword') as string;
+    const newPassword = formData.get('newPassword') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
 
-    if (userIndex === -1) {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return { error: 'Lütfen tüm alanları doldurun.' };
+    }
+
+    if (newPassword.length < 6) {
+      return { error: 'Yeni şifre en az 6 karakter olmalıdır.' };
+    }
+
+    if (newPassword !== confirmPassword) {
+      return { error: 'Yeni şifreler birbiriyle eşleşmiyor.' };
+    }
+
+    // Kullanıcıyı Supabase üzerinden çek
+    const { data: dbUser, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .ilike('email', user.email)
+      .maybeSingle();
+
+    if (fetchError || !dbUser) {
       return { error: 'Kullanıcı kaydı bulunamadı.' };
     }
 
-    // Mevcut şifrenin hash kontrolü
+    // Mevcut şifre kontrolü (SHA-256 hash doğrulaması)
     const currentHash = hashPassword(currentPassword);
-    if (users[userIndex].passwordHash !== currentHash) {
+    if (dbUser.passwordHash !== currentHash) {
       return { error: 'Mevcut şifrenizi hatalı girdiniz.' };
     }
 
-    // Yeni şifrenin hash'ini kaydet
-    users[userIndex].passwordHash = hashPassword(newPassword);
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf-8');
+    // Yeni şifreyi güncelle
+    const newHash = hashPassword(newPassword);
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ passwordHash: newHash })
+      .ilike('email', user.email);
+
+    if (updateError) {
+      return { error: 'Şifre güncellenirken hata oluştu: ' + updateError.message };
+    }
 
     return { success: true, message: 'Şifreniz başarıyla güncellendi!' };
-  } catch {
-    return { error: 'Şifre güncellenirken bir hata oluştu.' };
+  } catch (err: any) {
+    return { error: err.message || 'Beklenmeyen bir hata oluştu.' };
   }
 }
 

@@ -8,7 +8,18 @@ import './globals.css';
 
 export const metadata = {
   title: 'DexX Shop',
-  description: 'VIP Yazılım & Lisans Çözümleri'
+  description: 'Cheats & Spoofers',
+  icons: {
+    icon: [
+      { url: '/icon.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon.png', sizes: '48x48', type: 'image/png' },
+      { url: '/icon.png', sizes: '64x64', type: 'image/png' },
+    ],
+    shortcut: '/icon.png',
+    apple: [
+      { url: '/icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
 };
 
 const jakarta = Plus_Jakarta_Sans({

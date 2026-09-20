@@ -5,6 +5,10 @@
   --foreground: #ededed;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: #000000;
   color: #ededed;
@@ -12,6 +16,7 @@ body {
   overflow-x: hidden;
   top: 0px !important;
   position: static !important;
+  
 }
 
 /* Google Translate İstenmeyen Tüm Barları ve Çerçeveleri Gizle */

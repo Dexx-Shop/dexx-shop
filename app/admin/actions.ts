@@ -306,3 +306,51 @@ export async function toggleOrderStatusAction(orderId: string, currentStatus: st
     return { success: false, error: err.message };
   }
 }
+
+// Toplu Kupon Üretme Action'ı
+export async function createBulkCouponsAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== 'owner') {
+    return { success: false, error: 'Bu işlem için Owner yetkisi gerekiyor.' };
+  }
+
+  const amount = parseFloat(formData.get('amount') as string);
+  const count = parseInt(formData.get('count') as string, 10);
+
+  if (isNaN(amount) || amount <= 0 || isNaN(count) || count <= 0) {
+    return { success: false, error: 'Geçerli bir tutar ve adet giriniz.' };
+  }
+
+  if (count > 200) {
+    return { success: false, error: 'Tek seferde en fazla 200 adet kod üretebilirsiniz.' };
+  }
+
+  // Rastgele güvenli kod oluşturucu (DEXX-XXXX-XXXX-XXXX)
+  const generateCode = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const segment = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    return `DEXX-${segment()}-${segment()}-${segment()}`;
+  };
+
+  const newCoupons = [];
+  for (let i = 0; i < count; i++) {
+    newCoupons.push({
+      code: generateCode(),
+      amount: amount,
+      isUsed: false,
+      created_at: new Date().toISOString()
+    });
+  }
+
+  // Supabase 'coupons' tablosuna toplu kayıt (batch insert)
+  const { data, error } = await supabaseAdmin
+    .from('coupons')
+    .insert(newCoupons)
+    .select();
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, coupons: data || newCoupons };
+}

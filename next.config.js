@@ -1,14 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // TypeScript hatalarını görmezden gel ve derlemeyi tamamla
   typescript: {
-    // Derlemede TypeScript hatalarını yoksayar ve build'i bitirir
     ignoreBuildErrors: true,
   },
+  // ESLint / linting hatalarını görmezden gel
   eslint: {
-    // Derlemede ESLint hatalarını yoksayar
     ignoreDuringBuilds: true,
   },
-  // Varsa mevcut diğer ayarların...
+  // Varsa diğer mevcut ayarların (images vb.) burada kalabilir
 };
 
-module.exports = nextConfig; // veya export default nextConfig;
+module.exports = nextConfig;

@@ -65,7 +65,7 @@ export async function sendVerificationCode(email: string, code: string): Promise
         <div class="container">
           <div class="logo">DexX<span>Shop</span></div>
           <div class="title">E-Posta Adresinizi Doğrulayın</div>
-          <div class="desc">DexX Shop üyeliğinizi tamamlamak için aşağıdaki 6 haneli tek kullanımlık güvenlik kodunu doğrulama alanına giriniz:</div>
+          <div class="desc">DexX Shop üyeliğinizi tamamlamak için aşağıdaki 6 haneli tek kullanımlık güvenlik kodunu giriniz:</div>
           <div class="code-box">${code}</div>
           <div class="desc" style="font-size: 12px; margin-bottom: 0;">Bu işlemi siz talep etmediyseniz bu e-postayı güvenle göz ardı edebilirsiniz. Kod 10 dakika geçerlidir.</div>
           <div class="footer">© 2026 DexX Shop. Tüm hakları saklıdır.</div>
@@ -105,11 +105,52 @@ export async function sendPasswordResetMail(email: string, resetLink: string): P
         <div class="container">
           <div class="logo">DexX<span>Shop</span></div>
           <div class="title">Şifrenizi Sıfırlayın</div>
-          <div class="desc">DexX Shop hesabınız için şifre sıfırlama talebinde bulundunuz. Yeni bir şifre belirlemek için aşağıdaki butona tıklayın:</div>
+          <div class="desc">DexX Shop hesabınız için şifre sıfırlama talebinde bulundunuz. Yeni şifre belirlemek için aşağıdaki butona tıklayın:</div>
           <div class="btn-wrap">
             <a href="${resetLink}" class="btn" target="_blank">Yeni Şifre Belirle</a>
           </div>
-          <div class="desc" style="font-size: 12px; margin-bottom: 0;">Bu işlemi siz talep etmediyseniz hesabınız güvendedir, hiçbir işlem yapmanıza gerek yoktur. Bağlantı 15 dakika geçerlidir.</div>
+          <div class="desc" style="font-size: 12px; margin-bottom: 0;">Bu işlemi siz talep etmediyseniz hiçbir işlem yapmanıza gerek yoktur. Bağlantı 15 dakika geçerlidir.</div>
+          <div class="footer">© 2026 DexX Shop. Tüm hakları saklıdır.</div>
+        </div>
+      </body>
+      </html>
+    `
+  });
+}
+
+/**
+ * Satın Alınan Lisans Anahtarını E-Posta ile Teslim Etme
+ */
+export async function sendLicenseEmail(email: string, productTitle: string, licenseKey: string): Promise<boolean> {
+  return await sendViaResendApi({
+    to: email,
+    subject: `DexX Shop - Siparişiniz Teslim Edildi: ${productTitle}`,
+    text: `Siparişiniz başarıyla tamamlandı!\nÜrün: ${productTitle}\nLisans Anahtarınız: ${licenseKey}\n\nBizi tercih ettiğiniz için teşekkür ederiz.`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #050505; color: #ffffff; margin: 0; padding: 40px 20px; }
+          .container { max-width: 540px; margin: 0 auto; background-color: #0c0c0f; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 36px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+          .logo { font-size: 24px; font-weight: 900; letter-spacing: -0.5px; color: #ffffff; text-align: center; margin-bottom: 24px; }
+          .logo span { color: #dc2626; }
+          .title { font-size: 18px; font-weight: 700; color: #ffffff; text-align: center; margin-bottom: 12px; }
+          .desc { font-size: 13px; color: #a1a1aa; line-height: 1.6; text-align: center; margin-bottom: 24px; }
+          .product-badge { background: #18181b; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 16px; font-weight: 700; color: #f43f5e; text-align: center; margin-bottom: 20px; font-size: 14px; }
+          .key-box { background: rgba(220, 38, 38, 0.08); border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 14px; padding: 16px; text-align: center; font-size: 18px; font-weight: 800; font-family: monospace; letter-spacing: 2px; color: #f87171; margin-bottom: 24px; word-break: break-all; }
+          .footer { font-size: 11px; color: #52525b; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 24px; padding-top: 16px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="logo">DexX<span>Shop</span></div>
+          <div class="title">Siparişiniz Teslim Edildi!</div>
+          <div class="desc">Bizi tercih ettiğiniz için teşekkür ederiz. Satın aldığınız ürünün lisans anahtarı aşağıdadır:</div>
+          <div class="product-badge">${productTitle}</div>
+          <div class="key-box">${licenseKey}</div>
+          <div class="desc" style="font-size: 12px; margin-bottom: 0;">Lisansınızı kullanıcı panelinizden veya ilgili yazılım üzerinden aktifleştirebilirsiniz. Kurulum desteği için Discord sunucumuza katılabilirsiniz.</div>
           <div class="footer">© 2026 DexX Shop. Tüm hakları saklıdır.</div>
         </div>
       </body>

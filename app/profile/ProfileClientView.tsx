@@ -49,7 +49,6 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
 
   // Yönlendirme Bağlantıları
   const DISCORD_URL = 'https://discord.gg/P4hymgPn3R';
-  const ITEMSATIS_URL = 'https://www.itemsatis.com'; // Buraya kendi İtemSatış mağaza linkini yapıştırabilirsin
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -147,20 +146,6 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
           </div>
 
           <nav className="space-y-1.5">
-            {/* <button
-              onClick={() => setActiveTab('licenses')}
-              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition cursor-pointer ${
-                activeTab === 'licenses'
-                  ? 'bg-white text-black font-semibold shadow-sm'
-                  : 'text-neutral-400 hover:text-white hover:bg-white/[0.04]'
-              }`}
-            >
-              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-              </svg>
-              <span>Lisanslarım</span>
-            </button> */}
-
             <button
               onClick={() => setActiveTab('wallet')}
               className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition cursor-pointer ${
@@ -388,7 +373,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                     <span className="text-2xl sm:text-3xl font-extrabold text-red-500">$</span>
                   </div>
                   
-                  {/* CANLI VE ŞIK BUTONLAR */}
+                  {/* BUTONLAR */}
                   <div className="flex flex-wrap items-center gap-3.5 mt-8">
                     <a
                       href="https://dexx-shop.mysellauth.com/products"
@@ -419,10 +404,10 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                 </div>
               </div>
 
-              {/* 3'LÜ YENİ ÖDEME KARTLARI GRİDİ */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+              {/* 2'Lİ ÖDEME KARTLARI GRİDİ (KRİPTO & IBAN) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
                 
-                {/* 1. KART: KREDİ KARTI / KRİPTO (SELLAUTH) */}
+                {/* 1. KART: KRİPTO / GLOBAL ÖDEME (SELLAUTH) */}
                 <a
                   href="https://dexx-shop.mysellauth.com/products"
                   target="_blank"
@@ -435,7 +420,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                   <div className="w-12 h-9 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:border-red-500/50 transition-all">
                     <div className="w-3.5 h-2.5 rounded-[2px] bg-red-600" />
                   </div>
-                  <h4 className="text-sm font-extrabold text-white tracking-tight">Kredi Kartı / Global Ödeme</h4>
+                  <h4 className="text-sm font-extrabold text-white tracking-tight">Kripto / Global Ödeme</h4>
                   <p className="text-xs text-neutral-400 font-medium mt-1">SellAuth üzerinden</p>
                   <span className="text-[11px] font-bold text-red-500 flex items-center gap-1 mt-1.5">
                     <span>⚡ Otomatik Yükleme</span>
@@ -456,24 +441,6 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
                   <p className="text-xs text-neutral-400 font-medium mt-1">Türk kullanıcılar içindir.</p>
                   <span className="text-[11px] font-bold text-neutral-400 group-hover:text-emerald-400 flex items-center gap-1 mt-1.5 transition-colors">
                     <span>↗ Discord ticket üzerinden</span>
-                  </span>
-                </a>
-
-                {/* 3. KART: İTEMSATIŞ */}
-                {/* 3. İtemSatış (Doğrudan DexX Shop Profili) */}
-                <a
-                  href="https://www.itemsatis.com/profil/dexxshop.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="relative bg-[#0c0c0f] border border-white/[0.08] hover:border-amber-500/50 rounded-3xl p-6 flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer h-44 group hover:shadow-[0_0_30px_rgba(245,158,11,0.15)] hover:-translate-y-1 no-underline"
-                >
-                  <div className="w-12 h-9 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:border-amber-500/50 transition-all">
-                    <span className="text-amber-400 font-black text-xs tracking-tighter">İS</span>
-                  </div>
-                  <h4 className="text-sm font-extrabold text-white tracking-tight">İtemSatış</h4>
-                  <p className="text-xs text-neutral-400 font-medium mt-1">Tüm ödeme seçenekleri</p>
-                  <span className="text-[11px] font-bold text-amber-500/90 flex items-center gap-1 mt-1.5">
-                    <span>↗ İtemSatış üzerinden</span>
                   </span>
                 </a>
 
@@ -713,7 +680,7 @@ export default function ProfileClientView({ user, licenses: initialLicenses }: P
             </div>
 
             <p className="text-xs text-neutral-400 leading-relaxed font-normal">
-              İtemSatış üzerinden veya yöneticilerden aldığınız bakiye kupon kodunu girerek cüzdanınıza anında yükleme yapabilirsiniz.
+              Yöneticilerden veya SellAuth üzerinden aldığınız bakiye kupon kodunu girerek cüzdanınıza anında yükleme yapabilirsiniz.
             </p>
 
             {redeemMsg && (

@@ -72,7 +72,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             <span className="text-4xl block">📦</span>
             <h3 className="text-base font-bold text-white">Bu kategoride henüz aktif ürün bulunmuyor.</h3>
             <p className="text-neutral-400 text-xs max-w-sm mx-auto">
-              Admin panelinden oyun kategorisi olarak "{displayName}" seçerek yeni ürün eklediğinizde otomatik olarak burada listelenecektir.
+               Anlık olarak "{displayName}" yazılımı bulunmamakta.
             </p>
             <Link
               href="/#products"
